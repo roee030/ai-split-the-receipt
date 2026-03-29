@@ -4,6 +4,7 @@ import type { ParsedReceipt } from '../../types/receipt.types';
 
 const baseReceipt: ParsedReceipt = {
   isReceipt: true,
+  receipt_type: 'restaurant',
   restaurantName: 'Test',
   subtotal: null,
   tax: null,
@@ -35,7 +36,7 @@ describe('parseReceiptToItems', () => {
   });
 
   it('corrects unitPrice from totalPrice when extras rolled in', () => {
-    // Burger: unitPrice=45 but extras added so totalPrice=53
+    // Burger base=45, but unitPrice mismatches because extras were not yet accounted for
     const items = parseReceiptToItems({
       ...baseReceipt,
       items: [{ id: '1', name: 'Burger (extra cheese)', quantity: 1, unitPrice: 45, totalPrice: 53, category: 'food' }],
@@ -61,12 +62,41 @@ describe('parseReceiptToItems', () => {
     expect(items[0].quantity).toBe(1);
   });
 
-  it('preserves hasExtras flag from raw item', () => {
+  it('rolls up sub_item prices into parent totalPrice', () => {
     const items = parseReceiptToItems({
       ...baseReceipt,
-      items: [{ id: '1', name: 'Steak (sauce)', quantity: 1, unitPrice: 89, totalPrice: 89, category: 'food', hasExtras: true }],
+      items: [{
+        id: '1', name: 'Burger', quantity: 1, unitPrice: 45, totalPrice: 45, category: 'food',
+        sub_items: [
+          { name: 'Extra cheese', price: 8 },
+          { name: 'Club discount', price: -5 },
+        ],
+      }],
     });
+    expect(items[0].totalPrice).toBe(48); // 45 + 8 - 5
     expect(items[0].hasExtras).toBe(true);
+  });
+
+  it('appends sub_item names to parent name', () => {
+    const items = parseReceiptToItems({
+      ...baseReceipt,
+      items: [{
+        id: '1', name: 'Burger', quantity: 1, unitPrice: 45, totalPrice: 45, category: 'food',
+        sub_items: [{ name: 'ללא גלוטן', price: 0 }],
+      }],
+    });
+    expect(items[0].name).toBe('Burger (ללא גלוטן)');
+  });
+
+  it('hasExtras is false when all sub_items have zero price (notes only)', () => {
+    const items = parseReceiptToItems({
+      ...baseReceipt,
+      items: [{
+        id: '1', name: 'Steak', quantity: 1, unitPrice: 89, totalPrice: 89, category: 'food',
+        sub_items: [{ name: 'well done', price: 0 }],
+      }],
+    });
+    expect(items[0].hasExtras).toBe(false);
   });
 });
 
