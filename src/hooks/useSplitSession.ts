@@ -15,6 +15,7 @@ const DEFAULT_SESSION: SplitSession = {
   restaurantName: null,
   currency: 'ILS',
   scanConfidence: null,
+  splitMode: null,
 };
 
 // Screens that get their own browser history entry (back-navigable)
@@ -243,6 +244,10 @@ export function useSplitSession() {
     });
   }, []);
 
+  const setSplitMode = useCallback((splitMode: SplitSession['splitMode']) => {
+    setSession((s) => ({ ...s, splitMode }));
+  }, []);
+
   const setTip = useCallback((tip: TipConfig) => {
     setSession((s) => ({ ...s, tip }));
   }, []);
@@ -286,6 +291,7 @@ export function useSplitSession() {
     setClaimQuantity,
     setSharedClaim,
     splitRemainingEvenly,
+    setSplitMode,
     setTip,
     setTax,
     setServiceCharge,

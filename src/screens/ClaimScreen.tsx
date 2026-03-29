@@ -190,15 +190,15 @@ export function ClaimScreen() {
           </div>
           <motion.button
             onClick={() => setScreen('tip')}
-            disabled={people.length > 1 && unclaimedCount > 0}
+            disabled={session.splitMode === 'whole' && unclaimedCount > 0}
             className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-accent text-white font-bold rounded-2xl disabled:opacity-40 shadow-lg shadow-accent/30 text-sm"
             whileTap={{ scale: 0.97 }}
           >
-            {people.length === 1
-              ? 'See My Total'
-              : unclaimedCount === 0
-                ? 'Submit Claims'
-                : `${unclaimedCount} unclaimed`}
+            {session.splitMode === 'whole' && unclaimedCount > 0
+              ? `${unclaimedCount} unclaimed`
+              : session.splitMode === 'solo'
+                ? 'See My Total'
+                : 'Done →'}
             <span>→</span>
           </motion.button>
         </div>

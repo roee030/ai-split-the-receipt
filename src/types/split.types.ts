@@ -33,6 +33,7 @@ export interface SplitSession {
   restaurantName: string | null;
   currency: string;
   scanConfidence: 'high' | 'medium' | 'low' | null;
+  splitMode: 'solo' | 'whole' | 'some' | null;
 }
 
 export type Screen =

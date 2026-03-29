@@ -11,7 +11,7 @@ type Mode = 'pick' | 'whole' | 'some';
 
 
 export function PeopleScreen() {
-  const { session, setScreen, addPerson, removePerson, updatePersonName } = useSession();
+  const { session, setScreen, addPerson, removePerson, updatePersonName, setSplitMode } = useSession();
   const { people } = session;
   const [newName, setNewName] = useState('');
   const [mode, setMode] = useState<Mode>('pick');
@@ -65,6 +65,7 @@ export function PeopleScreen() {
             <motion.button
               onClick={() => {
                 if (people.length === 0) addPerson('Me');
+                setSplitMode('solo');
                 setScreen('claim');
               }}
               className="flex flex-col items-center gap-2 p-4 bg-surface border-2 border-border rounded-2xl text-center"
@@ -234,7 +235,10 @@ export function PeopleScreen() {
       {/* CTA */}
       <div className="fixed bottom-0 left-0 right-0 p-5 bg-bg/95 backdrop-blur-md border-t border-border">
         <motion.button
-          onClick={() => setScreen('claim')}
+          onClick={() => {
+            setSplitMode(mode === 'whole' ? 'whole' : 'some');
+            setScreen('claim');
+          }}
           className="w-full flex items-center justify-center gap-2 py-4 bg-accent text-white font-bold rounded-2xl shadow-lg shadow-accent/30"
           whileTap={{ scale: 0.97 }}
         >
