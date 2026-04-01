@@ -9,7 +9,7 @@ interface PersonChipsProps {
 
 export function PersonSwitcher({ people, activeIndex, onSelect, claimCounts }: PersonChipsProps) {
   return (
-    <div className="px-5 py-3">
+    <div data-coach-step="3" className="px-5 py-3">
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
         {people.map((p, i) => (
           <button

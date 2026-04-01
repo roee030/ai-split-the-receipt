@@ -150,7 +150,7 @@ export function ReviewScreen() {
           </button>
         </div>
 
-        <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+        <div data-coach-step="2" className="bg-surface border border-border rounded-2xl overflow-hidden">
           <AnimatePresence>
             {receiptItems.map((item, idx) => (
               <motion.div

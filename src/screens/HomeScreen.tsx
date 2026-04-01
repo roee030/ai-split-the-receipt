@@ -219,6 +219,7 @@ export function HomeScreen() {
                 <p className="text-white/80 text-sm">Scan or upload a receipt</p>
               </div>
               <motion.button
+                data-coach-step="1"
                 onClick={() => setStage('guide')}
                 className="w-20 h-20 rounded-full bg-accent flex flex-col items-center justify-center gap-1 shadow-lg shadow-accent/40"
                 whileTap={{ scale: 0.92 }}

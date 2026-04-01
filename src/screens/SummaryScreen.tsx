@@ -77,7 +77,7 @@ export function SummaryScreen() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 pb-40 space-y-3">
+      <div data-coach-step="4" className="flex-1 overflow-y-auto px-5 pb-40 space-y-3">
         <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">The Ledger</p>
         {people.map((person, i) => (
           <SummaryCard
