@@ -50,15 +50,20 @@ export function HomeScreen() {
       setScreen('review');
     } catch (err) {
       const raw = err instanceof Error ? err.message : '';
-      let message: string;
-      if (raw === 'NOT_A_RECEIPT') {
-        message = "That doesn't look like a receipt. Please take a clear photo of a restaurant bill or invoice.";
-      } else if (raw === 'NO_ITEMS_FOUND') {
-        message = "No items detected. Make sure the full receipt is in frame and well-lit, then try again.";
-      } else if (raw.includes('Too many requests')) {
-        message = raw;
+      let message: string | null = null;
+      if (raw.includes('NOT_A_RECEIPT')) {
+        message = "That doesn't look like a receipt. Try again with a clearer photo.";
+      } else if (raw.includes('NO_ITEMS_FOUND')) {
+        message = "We couldn't find any items. Try a better-lit photo.";
+      } else if (raw.includes('SCAN_LIMIT_REACHED')) {
+        setScanError('SCAN_LIMIT_REACHED');
+        setReceiptData([], {});
+        setScreen('home');
+        return;
+      } else if (raw.includes('unauthenticated')) {
+        message = "Please sign in to scan receipts.";
       } else {
-        message = raw || 'Failed to read receipt. Try again.';
+        message = "Something went wrong. Please try again.";
       }
       setScanError(message);
       setReceiptData([], {});
