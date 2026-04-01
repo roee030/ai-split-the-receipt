@@ -7,7 +7,10 @@ import { prepareImage } from '../utils/imageResize';
 import { scanReceipt } from '../services/geminiVision';
 import { parseReceiptToItems } from '../services/receiptParser';
 import { SignInModal } from '../components/auth/SignInModal';
+import { PaywallModal } from '../components/paywall/PaywallModal';
 import { getLocalScansUsed, incrementLocalScansUsed } from '../hooks/useSplitSession';
+import { useScanHistory } from '../hooks/useScanHistory';
+import { formatScanDate } from '../utils/formatDate';
 
 const CAMERA_TIPS = [
   { icon: '💡', text: 'Good lighting — avoid shadows & glare' },
@@ -30,6 +33,9 @@ export function HomeScreen() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showSignIn, setShowSignIn] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  const { history, loading: historyLoading } = useScanHistory();
 
   // Revoke object URL on unmount
   useEffect(() => {
@@ -63,9 +69,9 @@ export function HomeScreen() {
       } else if (raw.includes('NO_ITEMS_FOUND')) {
         message = "We couldn't find any items. Try a better-lit photo.";
       } else if (raw.includes('SCAN_LIMIT_REACHED')) {
-        setScanError('SCAN_LIMIT_REACHED');
         setReceiptData([], {});
         setScreen('home');
+        setShowPaywall(true);
         return;
       } else if (raw.includes('unauthenticated')) {
         message = "Please sign in to scan receipts.";
@@ -271,14 +277,42 @@ export function HomeScreen() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-display text-sm font-bold text-primary uppercase tracking-wider">Recent Activity</h3>
-          </div>
-          <div className="bg-surface border border-border rounded-2xl p-5 text-center">
-            <p className="text-2xl mb-2">🧾</p>
-            <p className="text-sm font-medium text-primary">No recent splits</p>
-            <p className="text-xs text-muted mt-1">Scan your first receipt to get started</p>
-          </div>
+          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">
+            Recent Activity
+          </h3>
+
+          {historyLoading && (
+            <p className="text-sm text-gray-400 text-center py-4">Loading…</p>
+          )}
+
+          {!historyLoading && history.length === 0 && (
+            <div className="bg-white border border-gray-100 rounded-2xl p-6 text-center">
+              <p className="text-2xl mb-2">📭</p>
+              <p className="text-sm text-gray-400">No recent splits yet</p>
+              <p className="text-xs text-gray-300 mt-1">Your scan history will appear here</p>
+            </div>
+          )}
+
+          {!historyLoading && history.length > 0 && (
+            <div className="bg-white border border-gray-100 rounded-2xl divide-y divide-gray-100 overflow-hidden">
+              {history.map((scan) => (
+                <div key={scan.id} className="flex items-center gap-3 px-4 py-3">
+                  <span className="text-2xl">🧾</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                      {scan.restaurantName ?? 'Receipt'}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {scan.itemCount} items · {formatScanDate(scan.createdAt)}
+                    </p>
+                  </div>
+                  <p className="text-sm font-bold text-gray-900 flex-shrink-0">
+                    {scan.currency === 'ILS' ? '₪' : scan.currency === 'USD' ? '$' : scan.currency}{scan.total.toFixed(2)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </motion.div>
       </div>
 
@@ -344,6 +378,16 @@ export function HomeScreen() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Paywall Modal */}
+      <PaywallModal
+        open={showPaywall}
+        onDismiss={() => setShowPaywall(false)}
+        onUnlocked={() => {
+          setShowPaywall(false);
+          if (capturedFile) doScan(capturedFile);
+        }}
+      />
 
       {/* Sign-in Modal */}
       <SignInModal
