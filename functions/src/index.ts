@@ -1,0 +1,94 @@
+import {onCall, HttpsError} from "firebase-functions/v2/https";
+import {setGlobalOptions} from "firebase-functions/v2";
+import * as admin from "firebase-admin";
+import {callGemini} from "./gemini.js";
+
+admin.initializeApp();
+const db = admin.firestore();
+
+setGlobalOptions({maxInstances: 10});
+
+export const scanReceipt = onCall(
+  {timeoutSeconds: 60, memory: "256MiB"},
+  async (request) => {
+    // 1. Require authentication
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be signed in");
+    }
+    const uid = request.auth.uid;
+
+    // 2. Check scan quota
+    const userRef = db.collection("users").doc(uid);
+    const userSnap = await userRef.get();
+    const userData = userSnap.data() ?? {};
+    const scansUsed: number = (userData.scansUsed as number) ?? 0;
+    const isPremium: boolean = (userData.isPremium as boolean) ?? false;
+
+    if (scansUsed >= 5 && !isPremium) {
+      throw new HttpsError("resource-exhausted", "SCAN_LIMIT_REACHED");
+    }
+
+    // 3. Validate input
+    const {imageBase64, mimeType} = request.data as {
+      imageBase64: string;
+      mimeType: string;
+    };
+    if (!imageBase64 || !mimeType) {
+      throw new HttpsError(
+        "invalid-argument",
+        "imageBase64 and mimeType required"
+      );
+    }
+
+    // 4. Call Gemini
+    const apiKey = process.env.GEMINI_API_KEY ?? "";
+    if (!apiKey) {
+      throw new HttpsError("internal", "Gemini API key not configured");
+    }
+
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = (await callGemini(
+        imageBase64,
+        mimeType,
+        apiKey
+      )) as Record<string, unknown>;
+    } catch (e) {
+      throw new HttpsError("internal", "Gemini call failed");
+    }
+
+    if (parsed.error) {
+      throw new HttpsError("invalid-argument", parsed.error as string);
+    }
+
+    // 5. Atomically increment scansUsed + store user doc
+    await userRef.set(
+      {
+        scansUsed: admin.firestore.FieldValue.increment(1),
+        email: request.auth.token.email ?? null,
+        displayName: request.auth.token.name ?? null,
+      },
+      {merge: true}
+    );
+
+    // 6. Save scan to history subcollection
+    const items =
+      (parsed.items as Array<Record<string, unknown>>) ?? [];
+    await userRef.collection("scans").add({
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      restaurantName: parsed.restaurant_name ?? null,
+      currency: parsed.currency ?? "ILS",
+      total: items.reduce(
+        (s: number, i: Record<string, unknown>) =>
+          s + ((i.total_price as number) ?? 0),
+        0
+      ),
+      itemCount: items.length,
+      items: items,
+      confidence: parsed.confidence ?? "medium",
+    });
+
+    // 7. Return parsed receipt to client
+    return parsed;
+  }
+);
