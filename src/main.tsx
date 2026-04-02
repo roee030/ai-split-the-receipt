@@ -1,6 +1,7 @@
 import './i18n';
 import ReactDOM from 'react-dom/client';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { CoachMarkProvider } from './context/CoachMarkContext';
 import { SplitSessionProvider } from './context/SplitSessionContext';
 import { AppRouter } from './App';
@@ -9,11 +10,13 @@ import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <AuthProvider>
-    <CoachMarkProvider>
-      <SplitSessionProvider>
-        <AppRouter />
-        <CoachMarkOverlay />
-      </SplitSessionProvider>
-    </CoachMarkProvider>
+    <ThemeProvider>
+      <CoachMarkProvider>
+        <SplitSessionProvider>
+          <AppRouter />
+          <CoachMarkOverlay />
+        </SplitSessionProvider>
+      </CoachMarkProvider>
+    </ThemeProvider>
   </AuthProvider>
 );

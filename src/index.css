@@ -22,6 +22,16 @@
   --person-8: #EF4444;
 }
 
+/* Dark mode token overrides */
+.dark {
+  --color-bg: #1A1A1A;
+  --color-surface: #2A2A2A;
+  --color-primary: #F0F0F0;
+  --color-muted: #9CA3AF;
+  --color-border: #3A3A3A;
+  --color-accent-soft: #2D1A0E;
+}
+
 * { -webkit-tap-highlight-color: transparent; }
 body {
   font-family: 'DM Sans', sans-serif;
