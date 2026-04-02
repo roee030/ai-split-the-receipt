@@ -9,6 +9,8 @@ import { ClaimScreen } from './screens/ClaimScreen';
 import { TipScreen } from './screens/TipScreen';
 import { SummaryScreen } from './screens/SummaryScreen';
 import { RoundRobinScreen } from './screens/RoundRobinScreen';
+import { PrivacyScreen } from './screens/PrivacyScreen';
+import { TermsScreen } from './screens/TermsScreen';
 
 export function AppRouter() {
   useDirection(); // applies dir + lang to <html> element
@@ -24,6 +26,8 @@ export function AppRouter() {
       {screen === 'tip' && <TipScreen key="tip" />}
       {screen === 'summary' && <SummaryScreen key="summary" />}
       {screen === 'roundrobin' && <RoundRobinScreen key="roundrobin" />}
+      {screen === 'privacy' && <PrivacyScreen key="privacy" />}
+      {screen === 'terms' && <TermsScreen key="terms" />}
     </AnimatePresence>
   );
 }

@@ -44,7 +44,10 @@ export type Screen =
   | 'claim'
   | 'tip'
   | 'summary'
-  | 'roundrobin';
+  | 'roundrobin'
+  | 'privacy'
+  | 'terms'
+  | 'settings';
 
 export interface PersonTotal {
   personId: string;
