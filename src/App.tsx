@@ -1,5 +1,6 @@
 import { AnimatePresence } from 'framer-motion';
 import { useSession } from './context/SplitSessionContext';
+import { useDirection } from './hooks/useDirection';
 import { HomeScreen } from './screens/HomeScreen';
 import { ProcessingScreen } from './screens/ProcessingScreen';
 import { ReviewScreen } from './screens/ReviewScreen';
@@ -10,6 +11,7 @@ import { SummaryScreen } from './screens/SummaryScreen';
 import { RoundRobinScreen } from './screens/RoundRobinScreen';
 
 export function AppRouter() {
+  useDirection(); // applies dir + lang to <html> element
   const { screen } = useSession();
 
   return (
