@@ -1,22 +1,31 @@
 import type { ParsedReceipt } from '../types/receipt.types';
+import { type PassTokens, type ScanTokens, calcScanCost } from '../monitoring/tokenCost';
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string;
 const GENERATE_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
 
+export type ScanResult = {
+  receipt: ParsedReceipt;
+  tokens: ScanTokens;
+};
+
 export async function scanReceipt(
   imageBlob: Blob,
   mimeType: string
-): Promise<ParsedReceipt> {
+): Promise<ScanResult> {
   const imageBase64 = await blobToBase64(imageBlob);
 
   // Pass 1: OCR — extract raw text from image
-  const transcript = await geminiOCR(imageBase64, mimeType);
+  const { transcript, tokens: pass1Tokens } = await geminiOCR(imageBase64, mimeType);
 
   // Pass 2: Structure — convert raw text to JSON
-  return geminiStructure(transcript);
+  const { receipt, tokens: pass2Tokens } = await geminiStructure(transcript);
+
+  const tokens = calcScanCost(pass1Tokens, pass2Tokens);
+  return { receipt, tokens };
 }
 
-async function geminiOCR(imageBase64: string, mimeType: string): Promise<string> {
+async function geminiOCR(imageBase64: string, mimeType: string): Promise<{ transcript: string; tokens: PassTokens }> {
   const response = await fetch(GENERATE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -41,17 +50,22 @@ async function geminiOCR(imageBase64: string, mimeType: string): Promise<string>
   const text: string = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
   if (!text.trim()) throw new Error('EMPTY_RESPONSE');
 
+  const pass1Tokens: PassTokens = {
+    inputTokens:  json.usageMetadata?.promptTokenCount     ?? 0,
+    outputTokens: json.usageMetadata?.candidatesTokenCount ?? 0,
+  };
+
   // Check if Pass 1 returned an error code
-  const trimmed = text.trim();
-  if (trimmed.startsWith('{')) {
-    const parsed = JSON.parse(trimmed);
+  const transcript = text.trim();
+  if (transcript.startsWith('{')) {
+    const parsed = JSON.parse(transcript);
     if (parsed.error) throw new Error(parsed.error as string);
   }
 
-  return trimmed;
+  return { transcript, tokens: pass1Tokens };
 }
 
-async function geminiStructure(transcript: string): Promise<ParsedReceipt> {
+async function geminiStructure(transcript: string): Promise<{ receipt: ParsedReceipt; tokens: PassTokens }> {
   const response = await fetch(GENERATE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -77,9 +91,16 @@ async function geminiStructure(transcript: string): Promise<ParsedReceipt> {
   const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) throw new Error('EMPTY_RESPONSE');
 
+  const pass2Tokens: PassTokens = {
+    inputTokens:  json.usageMetadata?.promptTokenCount     ?? 0,
+    outputTokens: json.usageMetadata?.candidatesTokenCount ?? 0,
+  };
+
   const parsed = JSON.parse(text);
   if (parsed.error) throw new Error(parsed.error as string);
-  return parsed as ParsedReceipt;
+  const receipt = parsed as ParsedReceipt;
+
+  return { receipt, tokens: pass2Tokens };
 }
 
 function blobToBase64(blob: Blob): Promise<string> {
