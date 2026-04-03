@@ -55,7 +55,12 @@ ITEMS SUM: ${itemsSum.toFixed(2)}
 PRINTED TOTAL: ${printedSubtotal.toFixed(2)}
 DIFFERENCE: ${diff.toFixed(2)}
 
-Find the error. Common causes: misread decimal (25,90 → 25.90), skipped line, merged prices, wrong discount handling.
+══ STRICT RULES ══
+You may ONLY fix NUMERIC values (prices, quantities).
+You must NEVER change item names. Copy every name verbatim from the transcript, including typos and [?].
+Wrong numbers are fixable. Wrong names are not your concern.
+
+Look for: misread decimal (25,90 → 25.90), skipped line, merged prices, wrong discount handling.
 Return ONLY corrected JSON, no markdown:
 {
   "receipt_type": "restaurant",
@@ -136,6 +141,7 @@ async function claudeOCR(
       model: 'claude-sonnet-4-5',
       max_tokens: 2048,
       temperature: 0,
+      top_p: 0,          // deterministic — no token sampling variation
       messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: mimeType, data: imageBase64 } },
         { type: 'text', text: OCR_PROMPT },
@@ -235,43 +241,48 @@ export { blobToBase64 };
 
 // ─── Prompts ──────────────────────────────────────────────────────────────────
 
-const OCR_PROMPT = `Your role is a RAW DATA EXTRACTOR. You are an OCR engine with zero knowledge of restaurants.
+const OCR_PROMPT = `You are a STRICT OCR ENGINE. Your only job is to copy pixels to characters.
 
-DO NOT guess words. DO NOT complete sentences. DO NOT use your knowledge of Hebrew food or menus.
-If you see "ע-ק-ר-ב", write "עקרב". Do not change it to "עוף" or any other word.
-Transcribe the visual shapes exactly as they appear, character by character.
-If a line is unreadable, write [UNREADABLE].
+══ ABSOLUTE RULES ══
+1. COPY, DO NOT FIX. If the ink shows "מזס מלן", output "מזס מלן". Never "מיץ מלון".
+2. COPY, DO NOT GUESS. If a character is unclear, output [?] in its place. Never guess.
+3. COPY, DO NOT COMPLETE. If a word looks like "לימונ", do not complete it to "לימונדה". Output "לימונ".
+4. WRONG TEXT > HALLUCINATION. A typo is correct. A real word that wasn't there is wrong.
+5. NO MENU KNOWLEDGE. You have never heard of Israeli food. These are unknown symbols.
 
-LAYOUT — Tabit receipt system:
-Each item line has a PRICE on the far LEFT. Use the price as your anchor to find each line.
-Then read the QUANTITY (a single digit: 1, 2, 3) and then the ITEM NAME in Hebrew to the right of it.
-
-Structure of each output line:
-  <price>  <quantity> <name>
-Examples:
+══ RECEIPT LAYOUT (Tabit system) ══
+Anchor on the PRICE (number on the far left of each line).
+Then: QUANTITY (single digit 1–9), then ITEM NAME in Hebrew.
+Output one line per item:
   98.00  1 עקרב ופטריות
   136.00 2 חומוסים סיגרה
   713.00 1 פירות מלך הפטה
 
-OUTPUT RULES:
-- One line per item only
-- Skip: header, address, phone, total row, tax row, QR code, loyalty text
-- Raw text only — no JSON, no markdown, no explanations
-
-If image is unreadable: {"error":"BLURRY"}
-If not a receipt: {"error":"NOT_A_RECEIPT"}`;
+══ OUTPUT ══
+Raw text only. One line per item.
+Skip: restaurant header, address, phone, total row, tax, QR code.
+Unreadable line → [UNREADABLE].
+Not a receipt → {"error":"NOT_A_RECEIPT"}
+Blurry / dark → {"error":"BLURRY"}`;
 
 const STRUCTURE_PROMPT = `Convert this receipt transcript into a JSON object.
 
-NAMES: Copy item names EXACTLY from the transcript. Do not change any word.
+══ ABSOLUTE RULE — NAMES ARE SACRED ══
+The "name" field must be a VERBATIM copy of the item name from the transcript.
+DO NOT fix spelling. DO NOT translate. DO NOT replace with a similar-sounding word.
+If the transcript says "מזס מלן", the name field must be "מזס מלן".
+If the transcript says "[?]קולה", the name field must be "[?]קולה".
+The transcript is ground truth. Your job is structure extraction only.
 
-LINE FORMAT:  PRICE  QUANTITY  NAME
-  "98.00  1 עקרב ופטריות"      → total_price=98, qty=1, name="עקרב ופטריות"
-  "136.00 2 חומוסים סיגרה"     → unit_price=68, total_price=136, qty=2, name="חומוסים סיגרה"
+══ LINE FORMAT ══
+PRICE  QUANTITY  NAME
+  "98.00  1 עקרב ופטריות"  → total_price=98, qty=1, name="עקרב ופטריות"
+  "136.00 2 חומוסים סיגרה" → unit_price=68, total_price=136, qty=2, name="חומוסים סיגרה"
 
 Sub-items: indented or prefixed >> / + → attach to item above.
 Discounts: "-10.00 הנחה" → sub_item with price: -10.
 Totals / tax / service → top-level fields, NOT items.
+[UNREADABLE] lines → include with price_missing: true, name: "[UNREADABLE]".
 
 Numbers: comma decimal "25,90"→25.90 · strip ₪$€ · "1,250.00"→1250.
 
