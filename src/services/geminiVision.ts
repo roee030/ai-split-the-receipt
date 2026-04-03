@@ -140,8 +140,7 @@ async function claudeOCR(
     body: JSON.stringify({
       model: 'claude-sonnet-4-5',
       max_tokens: 2048,
-      temperature: 0,
-      top_p: 0,          // deterministic — no token sampling variation
+      temperature: 0,    // deterministic — temperature:0 is sufficient, top_p cannot be combined
       messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: mimeType, data: imageBase64 } },
         { type: 'text', text: OCR_PROMPT },
