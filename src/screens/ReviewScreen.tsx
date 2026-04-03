@@ -301,6 +301,7 @@ export function ReviewScreen() {
                       amount={item.totalPrice}
                       currency={currency}
                       className="text-sm font-bold text-primary whitespace-nowrap"
+                      showWarningForZero={item.flagged && item.totalPrice === 0}
                     />
                     <button onClick={() => setEditingId(item.id)} className="text-muted p-1">
                       <Edit3 className="w-3.5 h-3.5" />

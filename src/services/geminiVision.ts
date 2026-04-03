@@ -198,8 +198,13 @@ Rules:
 - Preserve prefixes like -, +, or 'points' which indicate discounts or sub-items
 - Preserve the original language and script (Hebrew, Arabic, Chinese, etc.) — do NOT translate
 - Prices may appear as "25.90", "25,90", "₪25", "$12.50", "25.90₪" — transcribe exactly as printed
-- If a price is partially obscured or unclear, transcribe what is readable and mark unclear digits with "?"
-- Do NOT skip any line, even if it seems like a total or tax line
+- DO NOT hallucinate, guess, or normalize item names — if text is unclear or partially obscured, transcribe what is readable and mark unclear characters with "?"
+- Prioritize literal accuracy over making text fit expected patterns
+
+Decimal separator rules (CRITICAL for accuracy):
+- If you see comma used as decimal separator (e.g. "25,90"), keep it as "25,90" — do not convert to dot
+- Thousands separators (e.g. "1,250.00") should remain as "1,250.00"
+- Strip currency symbols only in the structuring phase, not here
 
 If the image quality prevents accurate reading, return ONLY one of these JSON objects:
 { "error": "BLURRY" }
@@ -211,6 +216,8 @@ If the image quality prevents accurate reading, return ONLY one of these JSON ob
 Otherwise return the raw transcript as plain text (no JSON, no markdown, no formatting).`;
 
 const STRUCTURE_PROMPT = `Below is a raw OCR transcript of a receipt. Convert it into a structured JSON object.
+
+CRITICAL: Prioritize literal transcription over 'smart' guessing. Do NOT normalize or hallucinate item names to fit common food categories. Transcribe names exactly as they appear, even if they seem like typos or unusual words.
 
 Item classification:
 - MAIN: a chargeable item or dish with its own price
