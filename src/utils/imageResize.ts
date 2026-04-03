@@ -1,15 +1,13 @@
 /**
- * Prepares a receipt image for Gemini OCR.
+ * Prepares a receipt image for OCR.
  *
- * Pipeline:
- *   1. Clean resize to 1200px (no upscaling — only downscale if needed)
- *   2. Grayscale + contrast/brightness filter
- *      — grayscale(100%): removes colour noise; Hebrew thermal-print receipts
- *        are black-on-white, so colour is irrelevant and only adds confusion
- *      — contrast(1.5): maximises separation between dark ink and white paper,
- *        which is the single biggest factor in Hebrew glyph recognition
- *      — brightness(1.1): lifts faint ink without blowing out white areas
- *   3. JPEG at 0.90 quality
+ * Strategy: minimal processing. Send the cleanest possible signal.
+ *
+ * - Resize to max 1600px (larger = more pixels per character = better OCR)
+ * - NO filters, NO grayscale, NO contrast — every processing step risks
+ *   smearing thin Hebrew thermal-print strokes before they reach the model
+ * - PNG output (lossless) — JPEG compression creates block artefacts around
+ *   fine strokes that corrupt Hebrew glyph recognition
  *
  * Caller signature unchanged: prepareImage(file) → { blob, mimeType }
  */
@@ -18,8 +16,8 @@ export async function prepareImage(
 ): Promise<{ blob: Blob; mimeType: string }> {
   const img = await createImageBitmap(file);
 
-  // Step 1: resize — cap longest side at 1200px; never upscale
-  const MAX = 1200;
+  // Resize: cap longest side at 1600px; never upscale (no artefacts)
+  const MAX = 1600;
   const longest = Math.max(img.width, img.height);
   const scale = longest > MAX ? MAX / longest : 1;
 
@@ -31,16 +29,13 @@ export async function prepareImage(
   canvas.height = h;
   const ctx = canvas.getContext('2d')!;
 
-  // Step 2: grayscale + high-contrast draw
-  // This is a single GPU-accelerated CSS filter pass — no pixel loop needed.
-  ctx.filter = 'grayscale(100%) contrast(1.5) brightness(1.1)';
+  // Plain draw — no filters whatsoever
   ctx.drawImage(img, 0, 0, w, h);
-  ctx.filter = 'none';
 
-  // Step 3: JPEG 0.90
+  // PNG: lossless, no block artefacts around fine Hebrew strokes
   const blob = await new Promise<Blob>((res) =>
-    canvas.toBlob(res as BlobCallback, 'image/jpeg', 0.90)
+    canvas.toBlob(res as BlobCallback, 'image/png')
   );
 
-  return { blob: blob!, mimeType: 'image/jpeg' };
+  return { blob: blob!, mimeType: 'image/png' };
 }
