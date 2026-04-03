@@ -21,7 +21,7 @@ export default defineConfig({
       },
     }),
   ],
-  base: process.env.GITHUB_ACTIONS ? "/ai-split-the-recipe/" : "/",
+  base: "/",
   test: {
     environment: "jsdom",
     globals: true,
