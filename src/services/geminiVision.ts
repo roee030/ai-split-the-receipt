@@ -23,7 +23,7 @@ export async function scanReceipt(
   const imageBase64 = await blobToBase64(imageBlob);
   console.log(`[DEBUG] Image: ${Math.round(imageBase64.length * 0.75 / 1024)} KB`);
 
-  // Pass 1: Claude interprets the receipt like a human — using Hebrew menu knowledge
+  // Pass 1: Claude — character-level OCR with high-contrast preprocessed image
   const { transcript, tokens: pass1Tokens } = await claudeHumanEyeOCR(imageBase64, mimeType);
 
   onPass2Start?.();
@@ -202,21 +202,19 @@ function blobToBase64(blob: Blob): Promise<string> {
 
 // ─── Prompts ──────────────────────────────────────────────────────────────────
 
-const HUMAN_EYE_PROMPT = `You are an experienced Israeli waiter reading a receipt from your own restaurant. You know Hebrew menus intimately.
+const HUMAN_EYE_PROMPT = `You are a mechanical character recognizer. Do not look at words. Look at characters.
 
-YOUR TASK: Look at this receipt image and list every ordered item with its price and quantity.
+Transcribe the image strictly by mapping visual glyphs to Hebrew letters.
+If you see "מ-ו-ז-ס", do not write "ק-ו-ק-ה".
+I would rather have a typo like "מזס מלן" than a hallucination like "קוקה קולה".
+Output ONLY the characters you are 100% sure of. Use [?] for ambiguous ones.
 
-HOW TO READ IT — like a human, not a machine:
-1. LOOK AT WHOLE WORDS, not letter-by-letter. A blurry "סל.. קיס." is clearly "סלט קיסר".
-2. USE YOUR MENU KNOWLEDGE. If pixels suggest "לימונד..", you know it's "לימונדה". If you see "קוק. קול.", it's "קוקה קולה".
-3. NO GIBBERISH RULE: If your reading produces a word that doesn't exist in Hebrew (like "ביסלימונדה" or "כוסות מזלג"), STOP and re-examine. That is always a misread of a real menu item.
-4. RECEIPT LAYOUT (Tabit system): Each line has PRICE on the LEFT, then QUANTITY (1/2/3), then ITEM NAME in Hebrew on the right.
-   Example: 53.00  1 סלט קיסר
+RECEIPT LAYOUT (Tabit system): each item line has PRICE on the LEFT, QUANTITY (1/2/3), then ITEM NAME in Hebrew on the right.
+Example: 53.00  1 סלט קיסר
 
-OUTPUT FORMAT — one line per item, nothing else:
+OUTPUT FORMAT — one line per item, raw text only:
 53.00  1 סלט קיסר
 18.00  1 קוקה קולה
-136.00 2 חומוסים סיגרה
 
 SKIP: restaurant name, address, phone, totals, tax, QR code, loyalty text.
 
