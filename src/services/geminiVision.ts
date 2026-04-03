@@ -4,11 +4,11 @@ import { type PassTokens, type ScanTokens, calcScanCost } from '../monitoring/to
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string;
 const BASE_URL = `https://generativelanguage.googleapis.com/v1beta/models`;
 
-// Pass 1 uses the Pro model — higher OCR fidelity for Hebrew glyphs.
-// Pass 2 uses Flash — text-only JSON conversion, speed matters more than vision here.
-const OCR_URL       = `${BASE_URL}/gemini-2.5-pro:generateContent?key=${API_KEY}`;
+// Both passes use gemini-2.5-flash — the best model available on the free tier.
+// gemini-2.5-pro has a free-tier quota of 0 (paid plan required).
+const OCR_URL       = `${BASE_URL}/gemini-2.5-flash:generateContent?key=${API_KEY}`;
 const STRUCTURE_URL = `${BASE_URL}/gemini-2.5-flash:generateContent?key=${API_KEY}`;
-// Pass 3 (Magic Fix) is text-only re-verify — Flash is fine
+// Pass 3 (Magic Fix) is text-only re-verify
 const GENERATE_URL  = STRUCTURE_URL;
 
 export type ScanResult = {
@@ -134,7 +134,7 @@ async function geminiOCR(imageBase64: string, mimeType: string): Promise<{ trans
 
   if (!response.ok) {
     const status = response.status;
-    if (status === 429) throw new Error('PRO_TOO_MANY_REQUESTS');
+    if (status === 429) throw new Error('TOO_MANY_REQUESTS');
     throw new Error(`HTTP_${status}`);
   }
 
