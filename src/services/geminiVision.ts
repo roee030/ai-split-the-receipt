@@ -128,7 +128,14 @@ async function geminiOCR(imageBase64: string, mimeType: string): Promise<{ trans
           { text: OCR_PROMPT },
         ],
       }],
-      generationConfig: { maxOutputTokens: 2048, temperature: 0 },
+      generationConfig: {
+        maxOutputTokens: 2048,
+        temperature: 0,
+        // Disable thinking mode — OCR is a direct copy task, not a reasoning task.
+        // With thinking enabled, 2.5-flash burns ~2000 thought tokens then returns
+        // finishReason:"OTHER" with no output at all.
+        thinkingConfig: { thinkingBudget: 0 },
+      },
     }),
   });
 
@@ -139,8 +146,12 @@ async function geminiOCR(imageBase64: string, mimeType: string): Promise<{ trans
   }
 
   const json = await response.json();
+  const finishReason: string = json.candidates?.[0]?.finishReason ?? '';
   const text: string = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-  if (!text.trim()) throw new Error('EMPTY_RESPONSE');
+  if (!text.trim()) {
+    // finishReason "OTHER" with no content = model aborted (often a safety/thinking issue)
+    throw new Error(finishReason === 'OTHER' ? 'MODEL_ABORTED' : 'EMPTY_RESPONSE');
+  }
 
   const pass1Tokens: PassTokens = {
     inputTokens:  json.usageMetadata?.promptTokenCount     ?? 0,
