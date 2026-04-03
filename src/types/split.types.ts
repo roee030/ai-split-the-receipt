@@ -35,6 +35,7 @@ export interface SplitSession {
   scanConfidence: 'high' | 'medium' | 'low' | null;
   splitMode: 'solo' | 'whole' | 'some' | null;
   lastTranscript: string | null;
+  processingPhase: 'scanning' | 'analyzing' | null;
 }
 
 export type Screen =

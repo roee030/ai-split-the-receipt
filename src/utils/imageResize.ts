@@ -1,9 +1,10 @@
 /**
  * Prepares a receipt image for Gemini OCR with a 3-step enhancement pipeline:
- *   1. Smart resize  — upscale small images (far-away receipt), cap at 1800px
+ *   1. Smart resize  — upscale small images (far-away receipt), cap at 1024px
  *   2. Contrast/brightness boost — compensates for bad lighting & shadows
  *   3. Unsharp mask  — sharpens character edges so Gemini reads text more accurately
  *
+ * Kept at 1024px to reduce token usage (~4 Gemini tiles) and avoid rate-limit errors.
  * Caller signature is unchanged: prepareImage(file) → { blob, mimeType }
  */
 export async function prepareImage(
@@ -12,12 +13,12 @@ export async function prepareImage(
   const img = await createImageBitmap(file);
 
   // ── Step 1: Smart resize ─────────────────────────────────────────────────
-  // If the receipt is small in frame (far-away shot), upscale to 1800px first
+  // If the receipt is small in frame (far-away shot), upscale to 1024px first
   // so the enhancement steps have enough pixels to work with.
-  // Always cap output at 1800px to stay within ~6 Gemini tiles (~258 tokens).
-  const MAX = 1800;
+  // Always cap output at 1024px to stay within ~4 Gemini tiles and avoid rate limits.
+  const MAX = 1024;
   const longest = Math.max(img.width, img.height);
-  const scale = longest < 1200
+  const scale = longest < 800
     ? MAX / longest          // upscale: small/far-away receipt
     : Math.min(1, MAX / longest); // downscale or keep: normal shot
 

@@ -65,27 +65,32 @@ export function ReviewScreen() {
     setMagicFixLoading(true);
     setMagicFixFailed(false);
 
-    const itemsSum = receiptItems.reduce((s, i) => s + i.totalPrice, 0);
-    const corrected = await geminiReVerify(lastTranscript, itemsSum, subtotal);
+    try {
+      const itemsSum = receiptItems.reduce((s, i) => s + i.totalPrice, 0);
+      const corrected = await geminiReVerify(lastTranscript, itemsSum, subtotal);
 
-    if (corrected) {
-      const newItems = parseReceiptToItems(corrected);
-      const newSum = newItems.reduce((s, i) => s + i.totalPrice, 0);
-      const stillMismatched = Math.abs(newSum - subtotal) / subtotal > 0.05;
+      if (corrected) {
+        const newItems = parseReceiptToItems(corrected);
+        const newSum = newItems.reduce((s, i) => s + i.totalPrice, 0);
+        const stillMismatched = Math.abs(newSum - subtotal) / subtotal > 0.05;
 
-      if (stillMismatched) {
-        setMagicFixFailed(true);
-        // TODO: fire magic_fix_triggered event (Task 7)
+        if (stillMismatched) {
+          setMagicFixFailed(true);
+          monitoring.track('magic_fix_triggered', { success: false });
+        } else {
+          setReceiptItems(newItems);
+          monitoring.track('magic_fix_triggered', { success: true });
+        }
       } else {
-        setReceiptItems(newItems);
-        // TODO: fire magic_fix_triggered event (Task 7)
+        setMagicFixFailed(true);
+        monitoring.track('magic_fix_triggered', { success: false });
       }
-    } else {
+    } catch {
       setMagicFixFailed(true);
-      // TODO: fire magic_fix_triggered event (Task 7)
+      monitoring.track('magic_fix_triggered', { success: false });
+    } finally {
+      setMagicFixLoading(false);
     }
-
-    setMagicFixLoading(false);
   }
 
   const grandTotal = receiptItems.reduce((s, i) => s + i.totalPrice, 0);

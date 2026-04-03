@@ -26,6 +26,7 @@ const DEFAULT_SESSION: SplitSession = {
   scanConfidence: null,
   splitMode: null,
   lastTranscript: null,
+  processingPhase: null,
 };
 
 // Screens that get their own browser history entry (back-navigable)
@@ -274,6 +275,10 @@ export function useSplitSession() {
     setSession((s) => ({ ...s, lastTranscript: transcript }));
   }, []);
 
+  const setProcessingPhase = useCallback((phase: SplitSession['processingPhase']) => {
+    setSession((s) => ({ ...s, processingPhase: phase }));
+  }, []);
+
   const setReceiptItems = useCallback((items: ReceiptItem[]) => {
     setSession((s) => ({ ...s, receiptItems: items }));
   }, []);
@@ -314,6 +319,7 @@ export function useSplitSession() {
     setTax,
     setServiceCharge,
     setTranscript,
+    setProcessingPhase,
     setReceiptItems,
     reset,
     unclaimedCount,

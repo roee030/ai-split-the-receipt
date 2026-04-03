@@ -12,14 +12,18 @@ export type ScanResult = {
 
 export async function scanReceipt(
   imageBlob: Blob,
-  mimeType: string
+  mimeType: string,
+  onPass2Start?: () => void,
 ): Promise<ScanResult> {
   const imageBase64 = await blobToBase64(imageBlob);
 
-  // Pass 1: OCR — extract raw text from image
+  // Pass 1: OCR — pure literal transcription of the image into raw text
   const { transcript, tokens: pass1Tokens } = await geminiOCR(imageBase64, mimeType);
 
-  // Pass 2: Structure — convert raw text to JSON
+  // Notify caller that Pass 1 is done and Pass 2 (analysis) is starting
+  onPass2Start?.();
+
+  // Pass 2: Structure — convert raw text to JSON (no image involved)
   const { receipt, tokens: pass2Tokens } = await geminiStructure(transcript);
 
   const tokens = calcScanCost(pass1Tokens, pass2Tokens);
@@ -190,34 +194,25 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
-const OCR_PROMPT = `Act as a high-precision OCR engine. Your ONLY job is to transcribe this receipt image into raw text. Do NOT interpret, translate, or reformat anything.
+const OCR_PROMPT = `You are a high-resolution scanner. Transcribe every single character from this receipt image exactly as it appears. Do not format, do not create JSON, do not translate. Just raw text.
 
-Rules:
-- Transcribe every line exactly as printed, including all characters
-- Keep each item name and its price on the same line — preserve horizontal layout
-- Preserve prefixes like -, +, or 'points' which indicate discounts or sub-items
-- Preserve the original language and script (Hebrew, Arabic, Chinese, etc.) — do NOT translate
-- Prices may appear as "25.90", "25,90", "₪25", "$12.50", "25.90₪" — transcribe exactly as printed
-- DO NOT hallucinate, guess, or normalize item names — if text is unclear or partially obscured, transcribe what is readable and mark unclear characters with "?"
-- Prioritize literal accuracy over making text fit expected patterns
+- Copy every line exactly as printed — item names, prices, totals, headers, footers
+- Preserve the original language and script exactly (Hebrew must stay Hebrew, Arabic must stay Arabic, etc.)
+- Keep item names and their prices on the same line
+- If a character is unclear or partially obscured, write "?" in its place
+- Do not correct spelling, do not normalize, do not guess — copy what you see
 
-Decimal separator rules (CRITICAL for accuracy):
-- If you see comma used as decimal separator (e.g. "25,90"), keep it as "25,90" — do not convert to dot
-- Thousands separators (e.g. "1,250.00") should remain as "1,250.00"
-- Strip currency symbols only in the structuring phase, not here
+If the image is too poor quality to read at all, output ONLY one of these (no other text):
+{"error":"BLURRY"}
+{"error":"CROPPED"}
+{"error":"LOW_LIGHT"}
+{"error":"NOT_A_RECEIPT"}
 
-If the image quality prevents accurate reading, return ONLY one of these JSON objects:
-{ "error": "BLURRY" }
-{ "error": "CROPPED" }
-{ "error": "LOW_LIGHT" }
-{ "error": "OCCLUDED" }
-{ "error": "NOT_A_RECEIPT" }
-
-Otherwise return the raw transcript as plain text (no JSON, no markdown, no formatting).`;
+Otherwise output the raw receipt text only — no JSON, no markdown, no explanation.`;
 
 const STRUCTURE_PROMPT = `Below is a raw OCR transcript of a receipt. Convert it into a structured JSON object.
 
-CRITICAL: Prioritize literal transcription over 'smart' guessing. Do NOT normalize or hallucinate item names to fit common food categories. Transcribe names exactly as they appear, even if they seem like typos or unusual words.
+CRITICAL RULE FOR ITEM NAMES: Copy item names character-for-character from the transcript. Do NOT translate, normalize, or substitute similar-sounding words. If the transcript says "המבורגר", the name field must be "המבורגר" — never a different word. Treat every item name as an opaque string to be preserved exactly.
 
 Item classification:
 - MAIN: a chargeable item or dish with its own price

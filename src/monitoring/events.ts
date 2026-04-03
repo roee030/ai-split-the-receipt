@@ -79,6 +79,12 @@ export interface SignInCompletedProps {
   method: 'google' | 'email';
 }
 
+// ── Magic Fix ─────────────────────────────────────────────────────────────
+
+export interface MagicFixTriggeredProps {
+  success: boolean;
+}
+
 // Events with no extra properties use an empty object type alias
 export type SignOutProps       = Record<string, never>;
 export interface PaywallShownProps { scans_used: number; }
@@ -101,7 +107,8 @@ export type MonitoringEvent =
   | 'sign_in_completed'
   | 'sign_out'
   | 'paywall_shown'
-  | 'paywall_converted';
+  | 'paywall_converted'
+  | 'magic_fix_triggered';
 
 export interface EventProperties {
   scan_started:        ScanStartedProps;
@@ -119,4 +126,5 @@ export interface EventProperties {
   sign_out:            SignOutProps;
   paywall_shown:       PaywallShownProps;
   paywall_converted:   PaywallConvertedProps;
+  magic_fix_triggered: MagicFixTriggeredProps;
 }

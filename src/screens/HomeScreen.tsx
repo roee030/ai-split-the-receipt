@@ -23,7 +23,7 @@ const CAMERA_TIPS = [
 type Stage = 'home' | 'guide' | 'preview';
 
 export function HomeScreen() {
-  const { setScreen, setReceiptData, scanError, setScanError, setTranscript } = useSession();
+  const { setScreen, setReceiptData, scanError, setScanError, setTranscript, setProcessingPhase } = useSession();
   const { user } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -64,9 +64,14 @@ export function HomeScreen() {
     incrementLocalScansUsed();
     setScanError(null);
     setScreen('processing');
+    setProcessingPhase('scanning');
     try {
       const { blob, mimeType } = await prepareImage(file);
-      const { receipt, tokens, transcript } = await scanReceipt(blob, mimeType);
+      const { receipt, tokens, transcript } = await scanReceipt(
+        blob,
+        mimeType,
+        () => setProcessingPhase('analyzing'),
+      );
       const items = parseReceiptToItems(receipt);
       setReceiptData(items, {
         restaurantName: receipt.restaurantName,
