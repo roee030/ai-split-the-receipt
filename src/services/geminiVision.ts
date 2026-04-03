@@ -15,6 +15,39 @@ export type ScanResult = {
   transcript: string;
 };
 
+/**
+ * DEV TEST — sends the image to Claude with a simple "what do you see?" prompt.
+ * Call this from HomeScreen in DEV mode to verify Claude can read the receipt.
+ * Output goes to browser console only.
+ */
+export async function testClaudeVision(imageBlob: Blob, mimeType: string): Promise<void> {
+  const imageBase64 = await applyDarkroom(imageBlob);
+  console.log('[TEST] Sending image to Claude — simple vision test...');
+
+  const response = await fetch(CLAUDE_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 1024,
+      temperature: 0,
+      messages: [{ role: 'user', content: [
+        { type: 'image', source: { type: 'base64', media_type: mimeType, data: imageBase64 } },
+        { type: 'text', text: 'This is a receipt image. Tell me exactly what text you can read on it. List every line you see, word by word.' },
+      ]}],
+    }),
+  });
+
+  const json = await response.json();
+  console.log('[TEST] Claude raw response status:', response.status);
+  console.log('[TEST] Claude sees:\n', json.content?.[0]?.text ?? json);
+}
+
 export async function scanReceipt(
   imageBlob: Blob,
   mimeType: string,
