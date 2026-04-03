@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { doc, onSnapshot, collection, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
+import { getLocalScansUsed } from '../../hooks/useSplitSession';
+import { monitoring } from '../../monitoring';
 
 // Replace with your actual Stripe Price ID from the Stripe dashboard
 const STRIPE_PRICE_ID = 'price_REPLACE_WITH_YOUR_PRICE_ID';
@@ -20,12 +22,18 @@ export function PaywallModal({ open, onDismiss, onUnlocked }: PaywallModalProps)
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (!open) return;
+    monitoring.track('paywall_shown', { scans_used: getLocalScansUsed() });
+  }, [open]);
+
   // Listen for isPremium becoming true in Firestore
   useEffect(() => {
     if (!open || !user) return;
     const userRef = doc(db, 'users', user.uid);
     const unsubscribe = onSnapshot(userRef, (snap) => {
       if (snap.data()?.isPremium === true) {
+        monitoring.track('paywall_converted', {});
         onUnlocked();
       }
     });

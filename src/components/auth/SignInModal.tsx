@@ -8,6 +8,7 @@ import {
   createUserWithEmailAndPassword,
 } from 'firebase/auth';
 import { auth } from '../../firebase';
+import { monitoring } from '../../monitoring';
 
 interface SignInModalProps {
   open: boolean;
@@ -37,6 +38,7 @@ export function SignInModal({ open, reason, onDismiss, onSuccess }: SignInModalP
     setError(null);
     try {
       await signInWithPopup(auth, new GoogleAuthProvider());
+      monitoring.track('sign_in_completed', { method: 'google' });
       onSuccess();
     } catch {
       setError('Google sign-in failed. Please try again.');
@@ -51,10 +53,12 @@ export function SignInModal({ open, reason, onDismiss, onSuccess }: SignInModalP
     setError(null);
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      monitoring.track('sign_in_completed', { method: 'email' });
       onSuccess();
     } catch {
       try {
         await createUserWithEmailAndPassword(auth, email, password);
+        monitoring.track('sign_in_completed', { method: 'email' });
         onSuccess();
       } catch {
         setError('Invalid credentials. Check your email and password.');
