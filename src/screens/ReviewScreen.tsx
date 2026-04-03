@@ -34,11 +34,13 @@ function getItemIcon(name: string): string {
 
 export function ReviewScreen() {
   const { session, setScreen, updateItem, deleteItem, addItem, setServiceCharge, setReceiptItems } = useSession();
-  const { receiptItems, currency, restaurantName, tax, serviceCharge, subtotal, scanConfidence, lastTranscript } = session;
+  const { receiptItems, currency, restaurantName, tax, serviceCharge, subtotal, scanConfidence, lastTranscript, debugImageUrl } = session;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [serviceAsTip, setServiceAsTip] = useState<boolean | null>(null);
   const [magicFixLoading, setMagicFixLoading] = useState(false);
   const [magicFixFailed, setMagicFixFailed] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const priceInputRef = useRef<HTMLInputElement>(null);
   const editedFieldsRef = useRef<Set<'name' | 'price' | 'quantity'>>(new Set());
 
@@ -90,6 +92,18 @@ export function ReviewScreen() {
       monitoring.track('magic_fix_triggered', { success: false });
     } finally {
       setMagicFixLoading(false);
+    }
+  }
+
+  async function handleCopyBase64() {
+    if (!debugImageUrl) return;
+    try {
+      await navigator.clipboard.writeText(debugImageUrl);
+      setCopyStatus('copied');
+      setTimeout(() => setCopyStatus('idle'), 2500);
+    } catch {
+      setCopyStatus('error');
+      setTimeout(() => setCopyStatus('idle'), 2500);
     }
   }
 
@@ -357,6 +371,93 @@ export function ReviewScreen() {
           </motion.button>
         </div>
       </div>
+
+      {/* ── DEV-only debug panel ─────────────────────────────────────────── */}
+      {import.meta.env.DEV && (
+        <div className="mx-5 mb-36">
+          <button
+            onClick={() => setShowDebug(v => !v)}
+            className="w-full py-2 text-xs font-mono text-muted border border-dashed border-border rounded-xl"
+          >
+            {showDebug ? '▲ Hide debug panel' : '▼ 🐛 Debug panel'}
+          </button>
+
+          <AnimatePresence>
+            {showDebug && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-2 p-4 bg-gray-950 border border-gray-700 rounded-2xl space-y-3 font-mono text-xs text-gray-300">
+                  <p className="text-gray-500 uppercase tracking-widest text-[10px]">🐛 Debug Tools — DEV only</p>
+
+                  {/* Processed image preview */}
+                  {debugImageUrl ? (
+                    <div className="space-y-2">
+                      <p className="text-gray-400">
+                        Image sent to Gemini ({Math.round(debugImageUrl.length * 0.75 / 1024)} KB encoded)
+                      </p>
+                      <img
+                        src={debugImageUrl}
+                        alt="Processed receipt"
+                        className="w-full rounded-lg border border-gray-700 object-contain max-h-48"
+                      />
+                      <button
+                        onClick={handleCopyBase64}
+                        className={`w-full py-2.5 rounded-xl font-semibold text-xs transition-colors ${
+                          copyStatus === 'copied'
+                            ? 'bg-green-700 text-white'
+                            : copyStatus === 'error'
+                            ? 'bg-red-700 text-white'
+                            : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                        }`}
+                      >
+                        {copyStatus === 'copied'
+                          ? '✅ Copied to clipboard!'
+                          : copyStatus === 'error'
+                          ? '❌ Clipboard unavailable'
+                          : '📋 Copy Base64 Image'}
+                      </button>
+                      <p className="text-gray-600 text-[10px]">
+                        Paste into browser console: atob(copied.split(',')[1]) to verify bytes,
+                        or paste into an online base64-to-image tool.
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-yellow-600">No debug image captured. Trigger a scan first.</p>
+                  )}
+
+                  {/* Raw transcript */}
+                  {lastTranscript ? (
+                    <div className="space-y-1">
+                      <p className="text-gray-400">Pass 1 raw transcript ({lastTranscript.length} chars):</p>
+                      <pre className="bg-gray-900 p-2 rounded-lg text-[10px] text-green-400 overflow-auto max-h-40 whitespace-pre-wrap break-all">
+                        {lastTranscript}
+                      </pre>
+                    </div>
+                  ) : (
+                    <p className="text-yellow-600">No transcript available.</p>
+                  )}
+
+                  {/* Final items dump */}
+                  <div className="space-y-1">
+                    <p className="text-gray-400">Final parsed items ({receiptItems.length}):</p>
+                    <pre className="bg-gray-900 p-2 rounded-lg text-[10px] text-cyan-400 overflow-auto max-h-40 whitespace-pre-wrap">
+                      {JSON.stringify(
+                        receiptItems.map(i => ({ name: i.name, price: i.totalPrice, flagged: i.flagged ?? false })),
+                        null,
+                        2
+                      )}
+                    </pre>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
     </ScreenContainer>
   );
 }

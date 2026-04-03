@@ -23,7 +23,7 @@ const CAMERA_TIPS = [
 type Stage = 'home' | 'guide' | 'preview';
 
 export function HomeScreen() {
-  const { setScreen, setReceiptData, scanError, setScanError, setTranscript, setProcessingPhase } = useSession();
+  const { setScreen, setReceiptData, scanError, setScanError, setTranscript, setProcessingPhase, setDebugImageUrl } = useSession();
   const { user } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -67,12 +67,29 @@ export function HomeScreen() {
     setProcessingPhase('scanning');
     try {
       const { blob, mimeType } = await prepareImage(file);
+
+      // DEV: store the actual JPEG data URL so ReviewScreen can expose it for inspection
+      if (import.meta.env.DEV) {
+        const reader = new FileReader();
+        reader.onload = () => setDebugImageUrl(reader.result as string);
+        reader.readAsDataURL(blob);
+      }
+
       const { receipt, tokens, transcript } = await scanReceipt(
         blob,
         mimeType,
         () => setProcessingPhase('analyzing'),
       );
       const items = parseReceiptToItems(receipt);
+
+      // DEV: log the final item mapping so we can see name→price after parsing
+      if (import.meta.env.DEV) {
+        console.log('[DEBUG] FINAL MAPPING', items.map(i => ({
+          name: i.name,
+          price: i.totalPrice,
+          flagged: i.flagged ?? false,
+        })));
+      }
       setReceiptData(items, {
         restaurantName: receipt.restaurantName,
         tax: receipt.currency === 'ILS' ? 0 : (receipt.tax ?? 0),

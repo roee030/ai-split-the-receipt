@@ -108,9 +108,8 @@ Return ONLY the corrected full JSON object. Do not explain, do not use markdown.
 }
 
 async function geminiOCR(imageBase64: string, mimeType: string): Promise<{ transcript: string; tokens: PassTokens }> {
-  // Sanity-check: log the base64 size so we can confirm the image is not
-  // empty or truncated before it leaves the browser.
-  console.log(`[OCR Pass 1] image base64 chars: ${imageBase64.length} (~${Math.round(imageBase64.length * 0.75 / 1024)} KB)`);
+  // Log 3: confirm the image payload is non-empty before sending
+  console.log(`[DEBUG] Image Chars: ${imageBase64.length} (~${Math.round(imageBase64.length * 0.75 / 1024)} KB)`);
 
   const response = await fetch(GENERATE_URL, {
     method: 'POST',
@@ -147,6 +146,9 @@ async function geminiOCR(imageBase64: string, mimeType: string): Promise<{ trans
     const parsed = JSON.parse(transcript);
     if (parsed.error) throw new Error(parsed.error as string);
   }
+
+  // Log 1: show exactly what Gemini transcribed before any structuring
+  console.log('--- [DEBUG] PASS 1: RAW TRANSCRIPT ---', transcript);
 
   return { transcript, tokens: pass1Tokens };
 }
@@ -185,6 +187,9 @@ async function geminiStructure(transcript: string): Promise<{ receipt: ParsedRec
   const parsed = JSON.parse(text);
   if (parsed.error) throw new Error(parsed.error as string);
   const receipt = parsed as ParsedReceipt;
+
+  // Log 2: show the full JSON object Gemini built from the transcript
+  console.log('--- [DEBUG] PASS 2: STRUCTURED JSON ---', parsed);
 
   return { receipt, tokens: pass2Tokens };
 }

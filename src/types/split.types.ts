@@ -36,6 +36,8 @@ export interface SplitSession {
   splitMode: 'solo' | 'whole' | 'some' | null;
   lastTranscript: string | null;
   processingPhase: 'scanning' | 'analyzing' | null;
+  /** DEV-only: full data URL of the image that was sent to Gemini. */
+  debugImageUrl: string | null;
 }
 
 export type Screen =
