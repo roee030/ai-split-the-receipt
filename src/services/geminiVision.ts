@@ -221,14 +221,19 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
-const OCR_PROMPT = `You are a high-fidelity character-by-character Hebrew OCR engine. Transcribe the image exactly as printed.
+const OCR_PROMPT = `You are a high-fidelity Hebrew OCR engine. Transcribe this receipt image exactly as printed.
 
-Rules:
-- Copy every character exactly as it appears — Hebrew, Arabic, Latin, digits, punctuation
-- If a word is unclear, write [UNCLEAR] — do NOT guess based on context
-- DO NOT replace unfamiliar words with common Hebrew words. If you see "מטבע", write "מטבע" — never "מים" or any substitute
-- DO NOT translate, normalise, or reformat anything
-- If you cannot read a line at all, skip it entirely — do not invent a replacement
+CRITICAL — TABLE LAYOUT RULE:
+This receipt likely has columns (quantity | item name | price) arranged horizontally per row.
+Read LEFT TO RIGHT across each row before moving to the next row.
+Output each row on one line: e.g. "1 המבורגר 96.00"
+Do NOT read the entire left column first and then the right column. That would misalign names and prices.
+
+Character rules:
+- Copy every character exactly — Hebrew stays Hebrew, digits stay digits
+- If a word is unclear or you are not confident, write [UNCLEAR] instead of guessing
+- DO NOT substitute an unfamiliar word with a common Hebrew word (e.g. do not replace "מטבע" with "מים")
+- DO NOT translate or normalise anything
 
 If the image is unreadable (blurry, cropped, dark, or not a receipt), output only one of:
 {"error":"BLURRY"}
@@ -240,7 +245,9 @@ Otherwise: raw text only, no JSON, no markdown, no explanation.`;
 
 const STRUCTURE_PROMPT = `Below is a raw OCR transcript of a receipt. Convert it into a structured JSON object.
 
-CRITICAL RULE FOR ITEM NAMES: Copy item names character-for-character from the transcript. Do NOT translate, normalize, or substitute similar-sounding words. If the transcript says "המבורגר", the name field must be "המבורגר" — never a different word. Treat every item name as an opaque string to be preserved exactly.
+CRITICAL RULE FOR ITEM NAMES: Copy item names character-for-character from the transcript. Do NOT translate, normalize, or substitute similar-sounding words. If the transcript says "המבורגר", the name field must be "המבורגר" — never a different word. Treat every item name as an opaque string to be preserved exactly. If the transcript contains [UNCLEAR] for a word, keep it as-is in the name field.
+
+LAYOUT RECOVERY RULE: Some receipts have a table layout (quantity | name | price per row). If the transcript shows a block of prices separated from a block of names, try to match them positionally — the Nth price goes with the Nth item. Use this only when names and prices are clearly in separate blocks.
 
 Item classification:
 - MAIN: a chargeable item or dish with its own price
