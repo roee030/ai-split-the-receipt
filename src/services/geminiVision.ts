@@ -21,7 +21,9 @@ import type { ParsedReceipt } from '../types/receipt.types';
 import { type PassTokens, type ScanTokens, calcScanCost } from '../monitoring/tokenCost';
 
 const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY as string;
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`;
+// gemini-2.0-flash: 1500 req/day free tier (vs 20/day for gemini-2.5-flash)
+// Two-pass uses 2 calls per scan → 750 scans/day free vs 10/day on 2.5-flash
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -101,7 +103,17 @@ async function pass1Transcript(
 
   if (!res.ok) {
     const s = res.status;
-    if (s === 429) throw new Error('TOO_MANY_REQUESTS');
+    if (s === 429) {
+      // Extract retry delay from error body when available (e.g. "56s")
+      try {
+        const body = await res.json();
+        const delay = body?.error?.details?.find((d: Record<string, unknown>) => d.retryDelay)?.retryDelay as string | undefined;
+        throw new Error(delay ? `TOO_MANY_REQUESTS:${delay}` : 'TOO_MANY_REQUESTS');
+      } catch (e) {
+        if (e instanceof Error && e.message.startsWith('TOO_MANY_REQUESTS')) throw e;
+        throw new Error('TOO_MANY_REQUESTS');
+      }
+    }
     throw new Error(`HTTP_${s}`);
   }
 

@@ -146,7 +146,10 @@ export function HomeScreen() {
       } else if (raw.includes('MODEL_ABORTED')) {
         message = "The scan was blocked by a content filter. Try a different photo or retake from a cleaner angle.";
       } else if (raw.includes('TOO_MANY_REQUESTS') || raw.includes('429')) {
-        message = 'Please wait a moment before scanning again.';
+        const delayMatch = raw.match(/TOO_MANY_REQUESTS:(\d+s)/);
+        message = delayMatch
+          ? `Rate limit reached. Please wait ${delayMatch[1]} before scanning again.`
+          : 'Rate limit reached. Please wait a moment before scanning again.';
       } else {
         message = "Something went wrong. Please try again.";
       }
