@@ -90,9 +90,10 @@ async function pass1Transcript(
       }],
       generationConfig: {
         // Plain text output — no JSON mode
-        maxOutputTokens: 4096,
+        // Thinking enabled: simple transcript task won't MODEL_ABORTED (only JSON did).
+        // Letting Gemini think means it takes extra care on ambiguous Hebrew characters.
+        maxOutputTokens: 8192,
         temperature: 0,
-        thinkingConfig: { thinkingBudget: 0 },
       },
     }),
   });
@@ -174,29 +175,63 @@ async function geminiText(prompt: string): Promise<{ text: string | null; tokens
   };
 }
 
-// ─── Image → base64 (no preprocessing — send raw) ────────────────────────────
-// We do NOT filter, sharpen, or binarize. Gemini is a multimodal LLM — it reads
-// the raw image exactly as Gemini UI does. Our preprocessing was mangling letter
-// shapes and making things worse.
+// ─── Image preprocessing ─────────────────────────────────────────────────────
+// Mild grayscale + contrast only. No binarization, no sharpening kernel.
+// Goal: darken ink slightly so ב/כ and other close Hebrew letterforms become
+// easier to distinguish, without destroying the anti-aliased edges that
+// differentiate them in thermal receipt fonts.
+// Contrast 1.25 (125%) — enough to push ink toward black, paper toward white,
+// while keeping gray transitions that encode letter shape information.
 
 async function blobToBase64(blob: Blob): Promise<string> {
+  const img    = await createImageBitmap(blob);
+  const canvas = document.createElement('canvas');
+  canvas.width  = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(img, 0, 0);
+
+  const imageData = ctx.getImageData(0, 0, img.width, img.height);
+  const d = imageData.data;
+  const CONTRAST = 1.25;
+
+  for (let i = 0; i < d.length; i += 4) {
+    // Luminance-weighted grayscale (ITU-R BT.601)
+    const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    // Contrast boost around midpoint — keeps gray edges, pushes extremes
+    const c = Math.max(0, Math.min(255, (gray - 128) * CONTRAST + 128));
+    d[i] = d[i + 1] = d[i + 2] = c;
+    d[i + 3] = 255;
+  }
+  ctx.putImageData(imageData, 0, 0);
+
   return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload  = () => resolve((reader.result as string).split(',')[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
+    canvas.toBlob((b) => {
+      if (!b) { reject(new Error('PREPROCESS_FAILED')); return; }
+      const reader = new FileReader();
+      reader.onload  = () => resolve((reader.result as string).split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(b);
+    }, 'image/png');
   });
 }
 
 // ─── Prompts ──────────────────────────────────────────────────────────────────
 
-// Pass 1 — dead simple. Just read the image.
-const TRANSCRIPT_PROMPT = `Transcribe this receipt image.
+// Pass 1 — pure visual read. No structure, no JSON. Just copy what is printed.
+const TRANSCRIPT_PROMPT = `You are an OCR scanner. Read this receipt image and output the raw text.
 
-Copy every line exactly as printed — character by character, including all Hebrew text.
-Output one receipt line per output line.
-Do NOT translate, fix, correct, or change anything.
-Do NOT add any formatting, markdown, or explanation.
+RULES:
+1. Copy every character exactly as it appears — do not fix, translate, or normalize anything.
+2. Output one receipt line per output line. No extra formatting or explanation.
+3. Hebrew characters that look similar in thermal receipt fonts — read the SHAPE, not the word:
+     ב (bet) and כ (kaf) look alike — write exactly what you see, even if the word looks wrong.
+     ו (vav) and ן (final nun) look alike — same rule.
+     If you are unsure between two similar characters, pick the one whose SHAPE fits better,
+     NOT the one that makes a more recognizable food word.
+4. If a word looks like nonsense — write it as nonsense. Do not replace with a known word.
+5. Do NOT use food knowledge. You are reading shapes off paper, not naming dishes.
+
 If the image is not a receipt, output only: NOT_A_RECEIPT
 If the image is too blurry to read, output only: BLURRY`;
 
