@@ -11,6 +11,16 @@ vi.mock('./llmAdapters', () => ({
   magicFix:            vi.fn(),
 }));
 
+// Mock providers to a non-flash primary so the fallback guard
+// (primary !== 'gemini-2.0-flash') fires correctly in retry tests.
+vi.mock('../config/providers', () => ({
+  PROVIDERS: {
+    pass1:  'gemini-2.5-flash',
+    pass2:  'gemini-2.5-flash',
+    magic:  'gemini-2.5-flash',
+  },
+}));
+
 import { scanReceipt } from './geminiVision';
 import * as adapters from './llmAdapters';
 
@@ -65,15 +75,17 @@ describe('callWithFallback — Pass 1 retries on 429', () => {
     expect(adapters.transcribeImage).toHaveBeenCalledTimes(1);
   });
 
-  it('does NOT retry when primary is already gemini-2.0-flash', async () => {
+  it('propagates error when fallback also fails (no infinite loop)', async () => {
+    // Primary (2.5-flash) fails → fallback (2.0-flash) also fails → error thrown, 2 total calls
     vi.mocked(adapters.transcribeImage)
-      .mockRejectedValue(new Error('TOO_MANY_REQUESTS'));
+      .mockRejectedValueOnce(new Error('TOO_MANY_REQUESTS'))  // primary
+      .mockRejectedValueOnce(new Error('TOO_MANY_REQUESTS')); // fallback
 
     await expect(
       scanReceipt(new Blob(['img']), 'image/jpeg')
     ).rejects.toThrow('TOO_MANY_REQUESTS');
 
-    expect(adapters.transcribeImage).toHaveBeenCalledTimes(1);
+    expect(adapters.transcribeImage).toHaveBeenCalledTimes(2);
   });
 
   it('retries on HTTP_500', async () => {
