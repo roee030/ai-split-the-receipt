@@ -195,22 +195,43 @@ async function geminiStructure(transcript: string): Promise<ParsedReceipt> {
 
 /**
  * Merge new OCR→correct mappings into src/data/autoLearnedCorrections.json.
- * Existing entries are preserved; new entries are added; conflicts keep
- * the NEW value (the golden file is always the source of truth).
+ * Format: { "_global": {...}, "restaurant key": {...} }
+ * - If the golden file has a restaurantName, corrections are scoped to that key.
+ * - Otherwise they go into "_global".
+ * Existing entries are preserved; conflicts keep the NEW value (golden file wins).
  */
-function persistCorrections(newEntries: Record<string, string>): number {
+function persistCorrections(
+  newEntries: Record<string, string>,
+  restaurantName?: string,
+): number {
   if (!Object.keys(newEntries).length) return 0;
 
-  let existing: Record<string, string> = {};
+  type NestedStore = Record<string, Record<string, string>>;
+  let existing: NestedStore = { _global: {} };
   if (fs.existsSync(CORRECTIONS_FILE)) {
-    try { existing = JSON.parse(fs.readFileSync(CORRECTIONS_FILE, 'utf8')); }
-    catch { /* start fresh if file is corrupt */ }
+    try {
+      const raw = JSON.parse(fs.readFileSync(CORRECTIONS_FILE, 'utf8'));
+      // Accept both old flat format and new nested format
+      if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        const firstVal = Object.values(raw)[0];
+        if (firstVal && typeof firstVal === 'object' && !Array.isArray(firstVal)) {
+          existing = raw as NestedStore; // already nested
+        } else {
+          existing = { _global: raw as Record<string, string> }; // migrate flat → nested
+        }
+      }
+    } catch { /* start fresh if file is corrupt */ }
   }
 
-  const before = Object.keys(existing).length;
-  const merged = { ...existing, ...newEntries };
-  fs.writeFileSync(CORRECTIONS_FILE, JSON.stringify(merged, null, 2) + '\n', 'utf8');
-  return Object.keys(merged).length - before; // how many NEW entries added
+  const scopeKey = restaurantName ? restaurantName.trim().toLowerCase() : '_global';
+  if (!existing[scopeKey]) existing[scopeKey] = {};
+
+  const before = Object.keys(existing[scopeKey]).length;
+  existing[scopeKey] = { ...existing[scopeKey], ...newEntries };
+  const added = Object.keys(existing[scopeKey]).length - before;
+
+  fs.writeFileSync(CORRECTIONS_FILE, JSON.stringify(existing, null, 2) + '\n', 'utf8');
+  return added;
 }
 
 // ─── Core runner ─────────────────────────────────────────────────────────────
@@ -254,7 +275,7 @@ async function runOne(imagePath: string, golden: GoldenFile, contrast: number): 
 
     // Learning engine — write corrections to disk if flag is set
     if (APPLY_CORRECTIONS && Object.keys(suggestions).length) {
-      const added = persistCorrections(suggestions);
+      const added = persistCorrections(suggestions, golden.restaurantName);
       if (added > 0) {
         Object.entries(suggestions).forEach(([ocr, correct]) =>
           console.log(`  ${C.cyan}✎ auto-correction saved: "${ocr}" → "${correct}"${C.reset}`)

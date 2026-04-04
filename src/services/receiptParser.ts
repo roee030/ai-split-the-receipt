@@ -1,6 +1,6 @@
 import type { ParsedReceipt, ReceiptItem } from '../types/receipt.types';
 import { generateId } from '../utils/idGenerator';
-import { applyCorrection } from '../utils/correctionDictionary';
+import { applyFuzzyCorrection } from '../utils/correctionDictionary';
 
 const ROUNDING_TOLERANCE = 0.11; // 0.10 + floating point buffer
 
@@ -42,9 +42,9 @@ export function parseReceiptToItems(
     const subTotal = subItems.reduce((sum, si) => sum + parsePrice(si.price), 0);
     const effectiveTotalPrice = parseFloat((basePrice + subTotal).toFixed(2));
 
-    // Apply correction-dictionary substitution (preserving raw OCR name for future corrections)
+    // Apply correction-dictionary substitution (with fuzzy fallback)
     const ocrName = item.name;
-    const correctedName = applyCorrection(restaurantName ?? null, ocrName);
+    const { name: correctedName, fuzzyMatch } = applyFuzzyCorrection(restaurantName ?? null, ocrName);
 
     // Append sub_item names to the parent name for display
     const subNames = subItems.map((si) => si.name).filter(Boolean);
@@ -67,6 +67,7 @@ export function parseReceiptToItems(
       name: displayName,
       // Store the raw OCR name so the feedback loop can save accurate corrections
       originalOcrName: ocrName !== correctedName ? ocrName : undefined,
+      fuzzyMatch: fuzzyMatch || undefined, // only set when true (keeps object clean)
       quantity: qty,
       unitPrice: correctedUnitPrice,
       totalPrice: effectiveTotalPrice,

@@ -3,6 +3,8 @@ export interface ReceiptItem {
   name: string;
   /** Raw text from OCR before any correction-dictionary substitution. */
   originalOcrName?: string;
+  /** True when name was substituted via fuzzy (Levenshtein) match — low confidence. */
+  fuzzyMatch?: boolean;
   quantity: number;
   unitPrice: number;
   totalPrice: number;

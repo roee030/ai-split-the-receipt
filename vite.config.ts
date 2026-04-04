@@ -22,9 +22,25 @@ export default defineConfig({
     }),
   ],
   base: "/",
+  server: {
+    proxy: {
+      // Dev proxy: browser calls /api/anthropic/... → Vite forwards to api.anthropic.com
+      // This bypasses CORS because the request leaves from Node (server), not the browser.
+      '/api/anthropic': {
+        target: 'https://api.anthropic.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/anthropic/, ''),
+      },
+    },
+  },
   test: {
     environment: "jsdom",
     globals: true,
     setupFiles: "./src/recipe test/setup.ts",
+    env: {
+      VITE_PASS1_PROVIDER: "gemini-2.5-flash",
+      VITE_PASS2_PROVIDER: "gemini-2.5-flash",
+      VITE_MAGIC_PROVIDER: "gemini-2.5-flash",
+    },
   },
 });
