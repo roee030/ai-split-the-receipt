@@ -1,12 +1,20 @@
 /**
- * Receipt scanning pipeline
+ * Receipt scanning pipeline — v4
  *
- * Single pass — Gemini 2.5 Flash (vision)
- *   Image → structured ParsedReceipt JSON in one call
- *   Gemini reads Hebrew thermal receipts correctly.
- *   Claude cannot — it invents plausible-sounding Hebrew food names.
+ * WHY THIS WORKS:
+ *   Gemini UI reads Hebrew receipts perfectly because it does two things we weren't:
+ *   1. Sends the RAW image — no contrast/sharpen preprocessing that mangles letter shapes
+ *   2. Asks only ONE question at a time — transcript OR structure, not both
  *
- * Magic Fix — Gemini 2.5 Flash (text-only, triggered by user)
+ *   Our previous single-pass prompt forced Gemini to OCR + build JSON simultaneously.
+ *   During JSON generation, the language model "completes" unfamiliar Hebrew words with
+ *   plausible food names. Separating the calls eliminates this: Pass 2 has no image,
+ *   so it can only work with the text it was handed — it cannot invent names.
+ *
+ * ARCHITECTURE:
+ *   Pass 1 (vision)  — raw image → plain-text transcript (dead-simple copy prompt)
+ *   Pass 2 (text)    — transcript → ParsedReceipt JSON   (no image, no hallucination)
+ *   Magic Fix        — user-triggered re-parse when prices don't add up
  */
 
 import type { ParsedReceipt } from '../types/receipt.types';
@@ -28,15 +36,19 @@ export async function scanReceipt(
   mimeType: string,
   onPass2Start?: () => void,
 ): Promise<ScanResult> {
-  const imageBase64 = await darkroom(imageBlob);
+  // Pass 1 — raw image → plain text transcript
+  const imageBase64       = await blobToBase64(imageBlob);
+  const { transcript, tokens: t1 } = await pass1Transcript(imageBase64, mimeType);
 
-  const { receipt, transcript, tokens } = await geminiVisionScan(imageBase64, mimeType);
+  console.log('[Pass1] transcript:\n', transcript);
 
-  // fire immediately — single pass, no real phase 2
+  // Pass 2 — transcript → structured JSON
   onPass2Start?.();
+  const { receipt, tokens: t2 } = await pass2Structure(transcript);
 
-  const empty: PassTokens = { inputTokens: 0, outputTokens: 0 };
-  return { receipt, transcript, tokens: calcScanCost(tokens, empty) };
+  console.log('[Pass2] items:', receipt.items);
+
+  return { receipt, transcript, tokens: calcScanCost(t1, t2) };
 }
 
 export async function geminiReVerify(
@@ -50,30 +62,22 @@ export async function geminiReVerify(
     .replace('{{TOTAL}}',      printedSubtotal.toFixed(2))
     .replace('{{DIFF}}',       Math.abs(itemsSum - printedSubtotal).toFixed(2));
 
-  const res = await fetch(GEMINI_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 8192, temperature: 0 },
-    }),
-  });
-
-  if (!res.ok) return null;
-  const json = await res.json();
-  const text = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  const { text } = await geminiText(prompt);
+  if (!text) return null;
   try {
     const p = JSON.parse(text);
     return p.error ? null : (p as ParsedReceipt);
   } catch { return null; }
 }
 
-// ─── Gemini vision scan ───────────────────────────────────────────────────────
+// ─── Pass 1: image → plain text transcript ───────────────────────────────────
+// Goal: get a verbatim text copy of everything on the receipt.
+// No JSON, no structure — just copy. This matches what Gemini UI does internally.
 
-async function geminiVisionScan(
+async function pass1Transcript(
   imageBase64: string,
   mimeType: string,
-): Promise<{ receipt: ParsedReceipt; transcript: string; tokens: PassTokens }> {
+): Promise<{ transcript: string; tokens: PassTokens }> {
   const res = await fetch(GEMINI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -81,14 +85,14 @@ async function geminiVisionScan(
       contents: [{
         parts: [
           { inline_data: { mime_type: mimeType, data: imageBase64 } },
-          { text: VISION_PROMPT },
+          { text: TRANSCRIPT_PROMPT },
         ],
       }],
       generationConfig: {
-        responseMimeType: 'application/json',
-        maxOutputTokens: 8192,
+        // Plain text output — no JSON mode
+        maxOutputTokens: 4096,
         temperature: 0,
-        thinkingConfig: { thinkingBudget: 0 }, // prevent MODEL_ABORTED on OCR tasks
+        thinkingConfig: { thinkingBudget: 0 },
       },
     }),
   });
@@ -104,24 +108,11 @@ async function geminiVisionScan(
   const text         = (json.candidates?.[0]?.content?.parts?.[0]?.text ?? '').trim();
 
   if (!text) throw new Error(finishReason === 'OTHER' ? 'MODEL_ABORTED' : 'EMPTY_RESPONSE');
-
-  let parsed: ParsedReceipt & { error?: string; raw_lines?: string[] };
-  try   { parsed = JSON.parse(text); }
-  catch { console.error('[Gemini] bad JSON:', text); throw new Error('PARSE_ERROR'); }
-
-  if (parsed.error) throw new Error(parsed.error);
-
-  // raw_lines is the plain text transcript for the debug panel and Magic Fix
-  const transcript = Array.isArray(parsed.raw_lines)
-    ? parsed.raw_lines.join('\n')
-    : parsed.items.map(i => `${i.total_price ?? ''}  ${i.quantity ?? 1} ${i.name}`).join('\n');
-
-  console.log('[Gemini] raw_lines:', parsed.raw_lines);
-  console.log('[Gemini] items:', parsed.items);
+  if (text.startsWith('NOT_A_RECEIPT')) throw new Error('NOT_A_RECEIPT');
+  if (text.startsWith('BLURRY'))        throw new Error('BLURRY');
 
   return {
-    receipt: parsed,
-    transcript,
+    transcript: text,
     tokens: {
       inputTokens:  json.usageMetadata?.promptTokenCount     ?? 0,
       outputTokens: json.usageMetadata?.candidatesTokenCount ?? 0,
@@ -129,126 +120,110 @@ async function geminiVisionScan(
   };
 }
 
-// ─── Image pre-processing ─────────────────────────────────────────────────────
-// Balanced grayscale + sharpen pipeline (replaces hard binarization).
-//
-// Why: pure binarization (snap to 0/255) merges thin strokes in Hebrew letters —
-// ו and ן become indistinguishable blobs. Keeping anti-aliased gray edges lets
-// the model distinguish close letterforms.
-//
-// Pipeline:
-//   1. Convert to grayscale (ITU-R BT.601 luminance weights)
-//   2. Apply contrast ×1.5 around midpoint (150% — enough to punch ink, not destroy edges)
-//   3. Apply 3×3 sharpen convolution kernel to restore edge clarity
-//   4. Output lossless PNG
+// ─── Pass 2: plain text → structured JSON ────────────────────────────────────
+// No image here. The model can ONLY use the transcript it was given.
+// It cannot invent Hebrew names it was never shown.
 
-async function darkroom(blob: Blob): Promise<string> {
-  const img    = await createImageBitmap(blob);
-  const W      = img.width;
-  const H      = img.height;
-  const canvas = document.createElement('canvas');
-  canvas.width  = W;
-  canvas.height = H;
-  const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(img, 0, 0);
+async function pass2Structure(
+  transcript: string,
+): Promise<{ receipt: ParsedReceipt; tokens: PassTokens }> {
+  const prompt          = STRUCTURE_PROMPT.replace('{{TRANSCRIPT}}', transcript);
+  const { text, tokens } = await geminiText(prompt);
 
-  const src = ctx.getImageData(0, 0, W, H);
-  const d   = src.data;
+  if (!text) throw new Error('EMPTY_RESPONSE');
 
-  // Step 1 & 2 — grayscale + contrast 150% in-place
-  // contrast formula: out = clamp((v - 128) * factor + 128)
-  const CONTRAST = 1.5;
-  const gray = new Uint8Array(W * H); // grayscale channel only
-  for (let p = 0; p < W * H; p++) {
-    const i = p * 4;
-    const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-    const c = Math.max(0, Math.min(255, (g - 128) * CONTRAST + 128));
-    gray[p] = c;
+  let parsed: ParsedReceipt & { error?: string };
+  try   { parsed = JSON.parse(text); }
+  catch { console.error('[Pass2] bad JSON:', text); throw new Error('PARSE_ERROR'); }
+
+  if (parsed.error) throw new Error(parsed.error);
+
+  return { receipt: parsed, tokens };
+}
+
+// ─── Shared Gemini text-only call ────────────────────────────────────────────
+
+async function geminiText(prompt: string): Promise<{ text: string | null; tokens: PassTokens }> {
+  const res = await fetch(GEMINI_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        maxOutputTokens: 8192,
+        temperature: 0,
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const s = res.status;
+    if (s === 429) throw new Error('TOO_MANY_REQUESTS');
+    return { text: null, tokens: { inputTokens: 0, outputTokens: 0 } };
   }
 
-  // Step 3 — sharpen with 3×3 kernel: center=5, neighbours=-1 (cross only)
-  //  [ 0 -1  0 ]
-  //  [-1  5 -1 ]
-  //  [ 0 -1  0 ]
-  const out = new Uint8Array(W * H);
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const p  = y * W + x;
-      const c  = gray[p] * 5;
-      const n  = y > 0     ? gray[(y - 1) * W + x] : gray[p];
-      const s  = y < H - 1 ? gray[(y + 1) * W + x] : gray[p];
-      const ww = x > 0     ? gray[y * W + (x - 1)] : gray[p];
-      const e  = x < W - 1 ? gray[y * W + (x + 1)] : gray[p];
-      out[p] = Math.max(0, Math.min(255, c - n - s - ww - e));
-    }
-  }
+  const json = await res.json();
+  return {
+    text: (json.candidates?.[0]?.content?.parts?.[0]?.text ?? '').trim() || null,
+    tokens: {
+      inputTokens:  json.usageMetadata?.promptTokenCount     ?? 0,
+      outputTokens: json.usageMetadata?.candidatesTokenCount ?? 0,
+    },
+  };
+}
 
-  // Step 4 — write back as grayscale RGB
-  const result = ctx.createImageData(W, H);
-  const rd = result.data;
-  for (let p = 0; p < W * H; p++) {
-    const i = p * 4;
-    rd[i] = rd[i + 1] = rd[i + 2] = out[p];
-    rd[i + 3] = 255;
-  }
-  ctx.putImageData(result, 0, 0);
+// ─── Image → base64 (no preprocessing — send raw) ────────────────────────────
+// We do NOT filter, sharpen, or binarize. Gemini is a multimodal LLM — it reads
+// the raw image exactly as Gemini UI does. Our preprocessing was mangling letter
+// shapes and making things worse.
 
-  // Step 5 — lossless PNG output
+async function blobToBase64(blob: Blob): Promise<string> {
   return new Promise<string>((resolve, reject) => {
-    canvas.toBlob((b) => {
-      if (!b) { reject(new Error('DARKROOM_FAILED')); return; }
-      const reader = new FileReader();
-      reader.onload  = () => resolve((reader.result as string).split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(b);
-    }, 'image/png');
+    const reader = new FileReader();
+    reader.onload  = () => resolve((reader.result as string).split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
   });
 }
 
 // ─── Prompts ──────────────────────────────────────────────────────────────────
 
-const VISION_PROMPT = `You are a high-speed document scanner. You have ZERO creativity. You are a data formatter only.
+// Pass 1 — dead simple. Just read the image.
+const TRANSCRIPT_PROMPT = `Transcribe this receipt image.
 
-═══ ZERO-HALLUCINATION RULES — ABSOLUTE, NO EXCEPTIONS ═══
+Copy every line exactly as printed — character by character, including all Hebrew text.
+Output one receipt line per output line.
+Do NOT translate, fix, correct, or change anything.
+Do NOT add any formatting, markdown, or explanation.
+If the image is not a receipt, output only: NOT_A_RECEIPT
+If the image is too blurry to read, output only: BLURRY`;
 
-RULE 1 — NAME INTEGRITY (most important):
-  The "name" field in every item MUST be copied CHARACTER-FOR-CHARACTER from the receipt.
-  If the receipt says "ג'ימזונה"  → name must be "ג'ימזונה"   (NOT "לימונדה")
-  If the receipt says "במבוק ערק" → name must be "במבוק ערק"  (NOT "יין" or "ערק")
-  If the receipt says "Shrimpp"   → name must be "Shrimpp"     (NOT "Shrimp")
-  You are NOT allowed to fix, translate, normalize, or improve any name. Ever.
+// Pass 2 — text only. No image. Can only use what the transcript says.
+const STRUCTURE_PROMPT = `You are a JSON formatter for Israeli restaurant receipts.
 
-RULE 2 — NO INVENTION:
-  Every item in "items" MUST appear in "raw_lines". You cannot add items that aren't in raw_lines.
-  If you cannot find an item in raw_lines, do not include it.
+RECEIPT TRANSCRIPT (read from image — treat as ground truth):
+{{TRANSCRIPT}}
 
-RULE 3 — UNCLEAR CHARACTERS:
-  If a character is unreadable, write * (asterisk). Do not substitute a "likely" letter.
-  If a whole word looks like an unclear mix of shapes, write it exactly as you see it — even
-  if it looks like nonsense. Do NOT replace it with a similar food item you know.
+YOUR ONLY JOB: parse the numbers and copy the names exactly.
 
-RULE 4 — ZERO CREATIVITY:
-  You are not a restaurant expert. You do not know food names. You only see shapes on paper.
-  Treat every word — Hebrew, English, or mixed — as an unknown sequence of shapes.
+NAME RULE (absolute — no exceptions):
+  Every item "name" MUST be copied character-for-character from the TRANSCRIPT above.
+  The transcript is the source of truth. You cannot change, fix, translate, or improve any name.
+  If transcript says "ג'ימזונה"  → name = "ג'ימזונה"   (not "לימונדה")
+  If transcript says "במבוק ערק" → name = "במבוק ערק"  (not "יין")
+  If a word looks like nonsense — keep it as nonsense. It is printed on the receipt.
 
-RULE 5 — CONFIDENCE MARKER:
-  If you are not 100% certain about a word, append a ? directly after it (no space).
-  Examples: "במבוק? ערק"  /  "ג'ימזונה? ×2"  /  "קוק?טייל"
-  This applies to both raw_lines and items[].name — use the same marked string in both.
-
-═══ RECEIPT LAYOUT (Tabit system) ═══
-Each item line: PRICE on LEFT, then QUANTITY (1 2 3…), then ITEM NAME in Hebrew on right.
+RECEIPT LAYOUT (Tabit system — price LEFT, quantity, name RIGHT):
   "98.00  1 קבב טלה"          → price=98,  qty=1, name="קבב טלה"
   "136.00 2 רוסטביף סינטה"    → price=136, qty=2, name="רוסטביף סינטה"
-  "713.00 1 פריט כללי מטבח"   → price=713, qty=1, name="פריט כללי מטבח"
 
-═══ OUTPUT FORMAT ═══
-Return ONLY this JSON (no markdown, no explanation):
+Return ONLY this JSON (no markdown):
 {
-  "raw_lines": ["exact verbatim text of each item line as seen in image"],
   "isReceipt": true,
   "receipt_type": "restaurant",
-  "restaurantName": string | null,
+  "restaurantName": null,
   "currency": "ILS",
   "subtotal": number | null,
   "tax": number | null,
@@ -268,35 +243,28 @@ Return ONLY this JSON (no markdown, no explanation):
   ]
 }
 
-MAPPING RULE: items[i].name = the name portion of raw_lines[i], copied verbatim.
-
 - Skip: header, address, phone, totals row, tax row, QR code, loyalty text
 - quantity defaults to 1
 - unit_price = total_price ÷ quantity
-- confidence = "low" if any price is unreadable
-- Unreadable image → {"error":"BLURRY"}
-- Not a receipt   → {"error":"NOT_A_RECEIPT"}`;
+- confidence = "low" if any price is missing`;
 
-const MAGIC_FIX_PROMPT = `This receipt was parsed but prices don't add up.
+const MAGIC_FIX_PROMPT = `This receipt was parsed but the prices don't add up.
 
-TRANSCRIPT:
+TRANSCRIPT (ground truth — do not change any name):
 {{TRANSCRIPT}}
 
 Items sum:     {{ITEMS_SUM}}
 Printed total: {{TOTAL}}
 Difference:    {{DIFF}}
 
-STRICT RULES:
-- Fix ONLY numeric values (prices, quantities). NEVER change any item name.
-- Every "name" field must be copied verbatim from the TRANSCRIPT above.
-- Do not translate, normalize, or correct any word in any name field.
-Common causes of mismatch: decimal comma vs dot, skipped line, merged prices, wrong discount sign.
+Fix ONLY numeric values (prices, quantities). Every "name" must be copied verbatim from the TRANSCRIPT.
+Common causes: decimal comma vs dot, skipped line, merged prices, wrong discount sign.
 
 Return corrected JSON (no markdown):
 {
   "isReceipt": true,
   "receipt_type": "restaurant",
-  "restaurantName": string | null,
+  "restaurantName": null,
   "currency": "ILS",
   "subtotal": number | null,
   "tax": number | null,
