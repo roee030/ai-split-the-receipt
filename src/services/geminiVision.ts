@@ -109,9 +109,14 @@ async function pass1Transcript(
   const finishReason = json.candidates?.[0]?.finishReason ?? '';
   const text         = (json.candidates?.[0]?.content?.parts?.[0]?.text ?? '').trim();
 
-  if (!text) throw new Error(finishReason === 'OTHER' ? 'MODEL_ABORTED' : 'EMPTY_RESPONSE');
+  if (!text) throw new Error(finishReason === 'MAX_TOKENS' ? 'BLURRY' : finishReason === 'OTHER' ? 'MODEL_ABORTED' : 'EMPTY_RESPONSE');
   if (text.startsWith('NOT_A_RECEIPT')) throw new Error('NOT_A_RECEIPT');
   if (text.startsWith('BLURRY'))        throw new Error('BLURRY');
+
+  // Flood guard: if >50% of words are [?], the image was unreadable
+  const words = text.split(/\s+/);
+  const unknowns = words.filter(w => w === '[?]').length;
+  if (unknowns / words.length > 0.5) throw new Error('BLURRY');
 
   return {
     transcript: text,
@@ -205,19 +210,15 @@ You ONLY copy visual characters exactly as they appear on the page.
    NEVER replace a character sequence with a real word.
    NEVER use language knowledge, food knowledge, or context.
 
-2. DO NOT GUESS
-   If ANY character is unclear → write [?] in that position.
-   Example: קו[?]ה קולה
-
-3. DO NOT COMPLETE WORDS
+2. DO NOT COMPLETE WORDS
    If the receipt says "לימונ" → output "לימונ", never "לימונדה".
    If the receipt says "רוסט" → output "רוסט", never "רוסטביף".
 
-4. CHARACTER ACCURACY OVER MEANING
+3. CHARACTER ACCURACY OVER MEANING
    A wrong character that matches the visual shape is CORRECT.
    A real food word that was not clearly visible is a FAILURE.
 
-5. NO NORMALIZATION
+4. NO NORMALIZATION
    Keep spacing, punctuation, and symbols exactly as printed.
 
 ════════ OUTPUT FORMAT ════════
