@@ -44,6 +44,10 @@ export async function scanReceipt(
 
   console.log('[Pass1] transcript:\n', transcript);
 
+  // Brief pause between passes — avoids per-minute rate limit when two calls land
+  // in the same second. 1.5s is enough to clear the RPM window.
+  await new Promise(r => setTimeout(r, 1500));
+
   // Pass 2 — transcript → structured JSON
   onPass2Start?.();
   const { receipt, tokens: t2 } = await pass2Structure(transcript);
@@ -104,13 +108,19 @@ async function pass1Transcript(
   if (!res.ok) {
     const s = res.status;
     if (s === 429) {
-      // Extract retry delay from error body when available (e.g. "56s")
       try {
         const body = await res.json();
-        const delay = body?.error?.details?.find((d: Record<string, unknown>) => d.retryDelay)?.retryDelay as string | undefined;
-        throw new Error(delay ? `TOO_MANY_REQUESTS:${delay}` : 'TOO_MANY_REQUESTS');
+        const violations: Array<{ quotaId?: string }> = body?.error?.details?.find(
+          (d: Record<string, unknown>) => d['@type']?.toString().includes('QuotaFailure')
+        )?.violations ?? [];
+        const isDaily = violations.some(v => v.quotaId?.includes('PerDay'));
+        const delay   = body?.error?.details?.find(
+          (d: Record<string, unknown>) => d.retryDelay
+        )?.retryDelay as string | undefined;
+        // DAILY_QUOTA_EXCEEDED is unrecoverable until tomorrow — distinguish from per-minute
+        throw new Error(isDaily ? 'DAILY_QUOTA_EXCEEDED' : delay ? `TOO_MANY_REQUESTS:${delay}` : 'TOO_MANY_REQUESTS');
       } catch (e) {
-        if (e instanceof Error && e.message.startsWith('TOO_MANY_REQUESTS')) throw e;
+        if (e instanceof Error && (e.message.startsWith('TOO_MANY_REQUESTS') || e.message === 'DAILY_QUOTA_EXCEEDED')) throw e;
         throw new Error('TOO_MANY_REQUESTS');
       }
     }
