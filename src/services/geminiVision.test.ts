@@ -66,15 +66,35 @@ describe('callWithFallback — Pass 1 retries on 429', () => {
     expect(result.receipt.isReceipt).toBe(true);
   });
 
-  it('does NOT retry on DAILY_QUOTA_EXCEEDED', async () => {
+  it('escalates to Claude when Gemini daily quota is exhausted', async () => {
+    // Pass 1: Gemini primary hits daily quota → callWithFallback escalates to Claude
     vi.mocked(adapters.transcribeImage)
-      .mockRejectedValue(new Error('DAILY_QUOTA_EXCEEDED'));
+      .mockRejectedValueOnce(new Error('DAILY_QUOTA_EXCEEDED')) // Gemini fails
+      .mockResolvedValueOnce({ transcript: 'Line1', tokens: mockTokens }); // Claude succeeds
+
+    vi.mocked(adapters.structureTranscript)
+      .mockResolvedValue({ receipt: makeReceipt(), tokens: mockTokens });
+
+    const result = await scanReceipt(new Blob(['img']), 'image/jpeg');
+
+    // 2 calls: primary Gemini (rejected) → Claude escalation (resolved)
+    expect(adapters.transcribeImage).toHaveBeenCalledTimes(2);
+    expect(adapters.transcribeImage).toHaveBeenLastCalledWith(
+      expect.any(String), expect.any(String), 'claude-sonnet-4-5'
+    );
+    expect(result.receipt.isReceipt).toBe(true);
+  });
+
+  it('surfaces error when Claude also fails after Gemini daily quota', async () => {
+    vi.mocked(adapters.transcribeImage)
+      .mockRejectedValueOnce(new Error('DAILY_QUOTA_EXCEEDED')) // Gemini fails
+      .mockRejectedValueOnce(new Error('ANTHROPIC_AUTH_ERROR')); // Claude also fails
 
     await expect(
       scanReceipt(new Blob(['img']), 'image/jpeg')
-    ).rejects.toThrow('DAILY_QUOTA_EXCEEDED');
+    ).rejects.toThrow('ANTHROPIC_AUTH_ERROR');
 
-    expect(adapters.transcribeImage).toHaveBeenCalledTimes(1);
+    expect(adapters.transcribeImage).toHaveBeenCalledTimes(2);
   });
 
   it('propagates error when fallback also fails (no infinite loop)', async () => {

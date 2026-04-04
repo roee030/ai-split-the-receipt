@@ -21,11 +21,24 @@ setGlobalOptions({maxInstances: 10});
  * The API key is read from a Firebase secret so it never
  * appears in the client bundle.
  */
+// Allowed origins for the Anthropic proxy.
+// Add a custom domain here if you set one up in Firebase Hosting.
+const ALLOWED_ORIGINS = new Set([
+  "https://split-the-receipt-50deb.web.app",
+  "https://split-the-receipt-50deb.firebaseapp.com",
+]);
+
 export const anthropicProxy = onRequest(
   {secrets: ["ANTHROPIC_API_KEY"]},
   (req, res) => {
-    // CORS preflight
-    res.set("Access-Control-Allow-Origin", "*");
+    // CORS — restrict to known production origins
+    const origin = req.headers.origin ?? "";
+    const allowedOrigin = ALLOWED_ORIGINS.has(origin) ? origin : "";
+
+    if (allowedOrigin) {
+      res.set("Access-Control-Allow-Origin", allowedOrigin);
+      res.set("Vary", "Origin");
+    }
     res.set("Access-Control-Allow-Headers", "Content-Type, anthropic-version");
 
     if (req.method === "OPTIONS") {

@@ -8,21 +8,24 @@ import { SplitSessionProvider } from './context/SplitSessionContext';
 import { AppRouter } from './App';
 import { CoachMarkOverlay } from './components/coach/CoachMarkOverlay';
 import { ConsentBanner } from './components/consent/ConsentBanner';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import './index.css';
 
 initSentry();
 initPostHog();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <AuthProvider>
-    <ThemeProvider>
-      <CoachMarkProvider>
-        <SplitSessionProvider>
-          <AppRouter />
-          <CoachMarkOverlay />
-          <ConsentBanner />
-        </SplitSessionProvider>
-      </CoachMarkProvider>
-    </ThemeProvider>
-  </AuthProvider>
+  <ErrorBoundary>
+    <AuthProvider>
+      <ThemeProvider>
+        <CoachMarkProvider>
+          <SplitSessionProvider>
+            <AppRouter />
+            <CoachMarkOverlay />
+            <ConsentBanner />
+          </SplitSessionProvider>
+        </CoachMarkProvider>
+      </ThemeProvider>
+    </AuthProvider>
+  </ErrorBoundary>
 );

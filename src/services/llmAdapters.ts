@@ -48,10 +48,11 @@ function geminiUrl(model: string): string {
 
 function geminiModelName(provider: ProviderName): string {
   switch (provider) {
-    case 'gemini-2.5-flash': return 'gemini-2.5-flash';
-    case 'gemini-1.5-pro':   return 'gemini-1.5-pro';
+    case 'gemini-2.5-flash':    return 'gemini-2.5-flash';
+    case 'gemini-1.5-flash':    return 'gemini-1.5-flash';
+    case 'gemini-2.0-flash-lite': return 'gemini-2.0-flash-lite';
     case 'gemini-2.0-flash':
-    default:                 return 'gemini-2.0-flash';
+    default:                    return 'gemini-2.0-flash';
   }
 }
 
@@ -105,7 +106,8 @@ export async function transcribeImage(
   switch (provider) {
     case 'gemini-2.0-flash':
     case 'gemini-2.5-flash':
-    case 'gemini-1.5-pro':
+    case 'gemini-1.5-flash':
+    case 'gemini-2.0-flash-lite':
       return _geminiTranscribe(imageBase64, mimeType, geminiModelName(provider));
     case 'claude-sonnet-4-5':
       return _claudeTranscribe(imageBase64, mimeType);
@@ -223,7 +225,8 @@ export async function structureTranscript(
   switch (provider) {
     case 'gemini-2.0-flash':
     case 'gemini-2.5-flash':
-    case 'gemini-1.5-pro':
+    case 'gemini-1.5-flash':
+    case 'gemini-2.0-flash-lite':
       return _geminiStructure(prompt, geminiModelName(provider));
     case 'claude-sonnet-4-5':
       return _claudeStructure(prompt);
@@ -321,7 +324,8 @@ export async function magicFix(
     switch (provider) {
       case 'gemini-2.0-flash':
       case 'gemini-2.5-flash':
-      case 'gemini-1.5-pro': {
+      case 'gemini-1.5-flash':
+      case 'gemini-2.0-flash-lite': {
         const res = await fetch(geminiUrl(geminiModelName(provider)), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

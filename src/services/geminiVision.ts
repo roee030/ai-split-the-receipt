@@ -31,41 +31,73 @@ export type ScanResult = {
 const MAX_SCAN_MS      = 20_000;
 const MIN_MAGIC_BUDGET = 2_000;
 const FALLBACK_PROVIDER: ProviderName = 'gemini-2.0-flash';
+const CLAUDE_PROVIDER:   ProviderName = 'claude-sonnet-4-5';
 
 const RETRYABLE = new Set(['TOO_MANY_REQUESTS', 'HTTP_500']);
 
+/** True when a Claude API key or proxy URL is configured in env. */
+function hasClaudeKey(): boolean {
+  return !!(
+    import.meta.env.VITE_ANTHROPIC_API_KEY ||
+    import.meta.env.VITE_ANTHROPIC_PROXY_URL
+  );
+}
+
 /**
- * Calls fn(primary). If it throws a retryable error AND the primary is not
- * already the fallback provider, retries once with gemini-2.0-flash.
- * Non-retryable errors (DAILY_QUOTA_EXCEEDED, BLURRY, etc.) re-throw immediately.
+ * Resilient provider invoker — three escalation tiers:
+ *
+ *   Tier 1 (primary)          — first attempt
+ *   Tier 2 (gemini-2.0-flash) — if Tier 1 hits a transient 429 / 500
+ *   Tier 3 (claude-sonnet-4-5)— if any Gemini tier hits DAILY_QUOTA_EXCEEDED
+ *                                and VITE_ANTHROPIC_* is configured
+ *
+ * Non-retryable errors (BLURRY, NOT_A_RECEIPT, ANTHROPIC_AUTH_ERROR…) throw immediately.
  */
 async function callWithFallback<T>(
   fn: (provider: ProviderName) => Promise<T>,
   primary: ProviderName,
   passLabel: string,
 ): Promise<T> {
-  try {
-    return await fn(primary);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    const isRetryable = RETRYABLE.has(msg) || msg.startsWith('TOO_MANY_REQUESTS');
+  const isGemini = (p: ProviderName) => p !== CLAUDE_PROVIDER;
 
-    if (isRetryable && primary !== FALLBACK_PROVIDER) {
-      // Parse retry delay from error message e.g. "TOO_MANY_REQUESTS:21s"
-      const delayMatch = msg.match(/TOO_MANY_REQUESTS:(\d+)s/);
-      const waitMs     = delayMatch ? (parseInt(delayMatch[1], 10) + 1) * 1000 : 1500;
+  async function tryProvider(provider: ProviderName): Promise<T> {
+    try {
+      return await fn(provider);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const isRetryable     = RETRYABLE.has(msg) || msg.startsWith('TOO_MANY_REQUESTS');
+      const isDailyExhausted = msg === 'DAILY_QUOTA_EXCEEDED';
 
-      if (import.meta.env.DEV) {
-        console.warn(
-          `%c[Fallback]%c ${passLabel} — ${primary} failed (${msg}). Waiting ${waitMs}ms then retrying with ${FALLBACK_PROVIDER}...`,
-          'color:#f97316;font-weight:bold', 'color:inherit'
-        );
+      // ── Tier 2: transient rate-limit on Gemini → retry with gemini-2.0-flash ──
+      if (isRetryable && isGemini(provider) && provider !== FALLBACK_PROVIDER) {
+        const delayMatch = msg.match(/TOO_MANY_REQUESTS:(\d+)s/);
+        const waitMs     = delayMatch ? (parseInt(delayMatch[1], 10) + 1) * 1000 : 1500;
+        if (import.meta.env.DEV) {
+          console.warn(
+            `%c[Fallback→Gemini]%c ${passLabel} — ${provider} failed (${msg}). Waiting ${waitMs}ms then retrying with ${FALLBACK_PROVIDER}...`,
+            'color:#f97316;font-weight:bold', 'color:inherit'
+          );
+        }
+        await new Promise(r => setTimeout(r, waitMs));
+        return tryProvider(FALLBACK_PROVIDER); // may itself escalate to Tier 3
       }
-      await new Promise(r => setTimeout(r, waitMs));
-      return fn(FALLBACK_PROVIDER);
+
+      // ── Tier 3: daily Gemini quota exhausted → escalate to Claude ──
+      if (isDailyExhausted && isGemini(provider) && hasClaudeKey()) {
+        if (import.meta.env.DEV) {
+          console.warn(
+            `%c[Fallback→Claude]%c ${passLabel} — Gemini daily quota exhausted. Escalating to Claude...`,
+            'color:#8b5cf6;font-weight:bold', 'color:inherit'
+          );
+        }
+        return fn(CLAUDE_PROVIDER); // Claude errors surface directly (no further retry)
+      }
+
+      throw err;
     }
-    throw err;
   }
+
+  return tryProvider(primary);
 }
 
 interface MathValidation {
