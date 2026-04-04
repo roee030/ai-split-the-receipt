@@ -90,10 +90,11 @@ async function pass1Transcript(
       }],
       generationConfig: {
         // Plain text output — no JSON mode
-        // Thinking enabled: simple transcript task won't MODEL_ABORTED (only JSON did).
-        // Letting Gemini think means it takes extra care on ambiguous Hebrew characters.
+        // thinkingBudget:0 — thinking triggers semantic reasoning ("what word is this?")
+        // which causes language completion. We want pure visual token picking.
         maxOutputTokens: 8192,
         temperature: 0,
+        thinkingConfig: { thinkingBudget: 0 },
       },
     }),
   });
@@ -192,16 +193,41 @@ async function blobToBase64(blob: Blob): Promise<string> {
 // ─── Prompts ──────────────────────────────────────────────────────────────────
 
 // Pass 1 — pure visual read. No structure, no JSON. Just copy what is printed.
-// Keep this prompt simple and trust Gemini's vision. Character-level hints cause
-// over-correction (telling the model "these letters look alike" makes it doubt
-// characters it was reading correctly).
-const TRANSCRIPT_PROMPT = `You are an OCR scanner. Read this receipt image and output the raw text.
+const TRANSCRIPT_PROMPT = `You are a LOW-LEVEL OCR engine.
 
-Copy every line exactly as printed — every character, every word, in Hebrew or any language.
-Output one receipt line per output line.
-Do NOT translate, normalize, fix spelling, or change anything.
-Do NOT use food or language knowledge — copy only what is visually on the page.
-If a word looks unusual or nonsensical, write it exactly as you see it.
+You are NOT allowed to read or understand words.
+You ONLY copy visual characters exactly as they appear on the page.
+
+════════ HARD RULES ════════
+
+1. DO NOT FIX TEXT
+   If text looks wrong → keep it wrong.
+   NEVER replace a character sequence with a real word.
+   NEVER use language knowledge, food knowledge, or context.
+
+2. DO NOT GUESS
+   If ANY character is unclear → write [?] in that position.
+   Example: קו[?]ה קולה
+
+3. DO NOT COMPLETE WORDS
+   If the receipt says "לימונ" → output "לימונ", never "לימונדה".
+   If the receipt says "רוסט" → output "רוסט", never "רוסטביף".
+
+4. CHARACTER ACCURACY OVER MEANING
+   A wrong character that matches the visual shape is CORRECT.
+   A real food word that was not clearly visible is a FAILURE.
+
+5. NO NORMALIZATION
+   Keep spacing, punctuation, and symbols exactly as printed.
+
+════════ OUTPUT FORMAT ════════
+
+One receipt line per output line.
+Copy only item rows (price + quantity + name).
+Skip headers, restaurant name, address, phone, totals, tax lines.
+Preserve original order.
+
+════════ EDGE CASES ════════
 
 If the image is not a receipt, output only: NOT_A_RECEIPT
 If the image is too blurry to read, output only: BLURRY`;
