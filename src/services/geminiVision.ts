@@ -223,8 +223,8 @@ You ONLY copy visual characters exactly as they appear on the page.
 ════════ OUTPUT FORMAT ════════
 
 One receipt line per output line.
-Copy only item rows (price + quantity + name).
-Skip headers, restaurant name, address, phone, totals, tax lines.
+Copy EVERY line on the receipt — all of it, top to bottom, nothing skipped.
+Do NOT decide what is an "item" vs a "header" — that is not your job. Just copy.
 Preserve original order.
 
 ════════ EDGE CASES ════════
