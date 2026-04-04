@@ -175,62 +175,33 @@ async function geminiText(prompt: string): Promise<{ text: string | null; tokens
   };
 }
 
-// ─── Image preprocessing ─────────────────────────────────────────────────────
-// Mild grayscale + contrast only. No binarization, no sharpening kernel.
-// Goal: darken ink slightly so ב/כ and other close Hebrew letterforms become
-// easier to distinguish, without destroying the anti-aliased edges that
-// differentiate them in thermal receipt fonts.
-// Contrast 1.25 (125%) — enough to push ink toward black, paper toward white,
-// while keeping gray transitions that encode letter shape information.
+// ─── Image → base64 ──────────────────────────────────────────────────────────
+// No pixel preprocessing. Gemini reads the raw image best — any filter we apply
+// risks mangling the exact pixel patterns that distinguish close Hebrew letterforms.
+// (Contrast boost was tested and broke קוקה→קרוה while fixing other items.)
 
 async function blobToBase64(blob: Blob): Promise<string> {
-  const img    = await createImageBitmap(blob);
-  const canvas = document.createElement('canvas');
-  canvas.width  = img.width;
-  canvas.height = img.height;
-  const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(img, 0, 0);
-
-  const imageData = ctx.getImageData(0, 0, img.width, img.height);
-  const d = imageData.data;
-  const CONTRAST = 1.25;
-
-  for (let i = 0; i < d.length; i += 4) {
-    // Luminance-weighted grayscale (ITU-R BT.601)
-    const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-    // Contrast boost around midpoint — keeps gray edges, pushes extremes
-    const c = Math.max(0, Math.min(255, (gray - 128) * CONTRAST + 128));
-    d[i] = d[i + 1] = d[i + 2] = c;
-    d[i + 3] = 255;
-  }
-  ctx.putImageData(imageData, 0, 0);
-
   return new Promise<string>((resolve, reject) => {
-    canvas.toBlob((b) => {
-      if (!b) { reject(new Error('PREPROCESS_FAILED')); return; }
-      const reader = new FileReader();
-      reader.onload  = () => resolve((reader.result as string).split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(b);
-    }, 'image/png');
+    const reader = new FileReader();
+    reader.onload  = () => resolve((reader.result as string).split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
   });
 }
 
 // ─── Prompts ──────────────────────────────────────────────────────────────────
 
 // Pass 1 — pure visual read. No structure, no JSON. Just copy what is printed.
+// Keep this prompt simple and trust Gemini's vision. Character-level hints cause
+// over-correction (telling the model "these letters look alike" makes it doubt
+// characters it was reading correctly).
 const TRANSCRIPT_PROMPT = `You are an OCR scanner. Read this receipt image and output the raw text.
 
-RULES:
-1. Copy every character exactly as it appears — do not fix, translate, or normalize anything.
-2. Output one receipt line per output line. No extra formatting or explanation.
-3. Hebrew characters that look similar in thermal receipt fonts — read the SHAPE, not the word:
-     ב (bet) and כ (kaf) look alike — write exactly what you see, even if the word looks wrong.
-     ו (vav) and ן (final nun) look alike — same rule.
-     If you are unsure between two similar characters, pick the one whose SHAPE fits better,
-     NOT the one that makes a more recognizable food word.
-4. If a word looks like nonsense — write it as nonsense. Do not replace with a known word.
-5. Do NOT use food knowledge. You are reading shapes off paper, not naming dishes.
+Copy every line exactly as printed — every character, every word, in Hebrew or any language.
+Output one receipt line per output line.
+Do NOT translate, normalize, fix spelling, or change anything.
+Do NOT use food or language knowledge — copy only what is visually on the page.
+If a word looks unusual or nonsensical, write it exactly as you see it.
 
 If the image is not a receipt, output only: NOT_A_RECEIPT
 If the image is too blurry to read, output only: BLURRY`;
