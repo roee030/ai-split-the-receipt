@@ -130,34 +130,70 @@ async function geminiVisionScan(
 }
 
 // ─── Image pre-processing ─────────────────────────────────────────────────────
-// True binarization: every pixel becomes pure black (#000000) or pure white (#ffffff).
-// CSS contrast() only shifts gray values — it does NOT binarize.
-// Pixel-level thresholding eliminates "gray fuzz" that causes letter misreads.
+// Balanced grayscale + sharpen pipeline (replaces hard binarization).
+//
+// Why: pure binarization (snap to 0/255) merges thin strokes in Hebrew letters —
+// ו and ן become indistinguishable blobs. Keeping anti-aliased gray edges lets
+// the model distinguish close letterforms.
+//
+// Pipeline:
+//   1. Convert to grayscale (ITU-R BT.601 luminance weights)
+//   2. Apply contrast ×1.5 around midpoint (150% — enough to punch ink, not destroy edges)
+//   3. Apply 3×3 sharpen convolution kernel to restore edge clarity
+//   4. Output lossless PNG
 
 async function darkroom(blob: Blob): Promise<string> {
   const img    = await createImageBitmap(blob);
+  const W      = img.width;
+  const H      = img.height;
   const canvas = document.createElement('canvas');
-  canvas.width  = img.width;
-  canvas.height = img.height;
+  canvas.width  = W;
+  canvas.height = H;
   const ctx = canvas.getContext('2d')!;
-
-  // Step 1 — draw original
   ctx.drawImage(img, 0, 0);
 
-  // Step 2 — binarize: grayscale each pixel, then snap to 0 or 255
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const d = imageData.data;
-  const THRESHOLD = 128; // mid-gray cutoff; ink → black, paper → white
-  for (let i = 0; i < d.length; i += 4) {
-    // luminance-weighted grayscale (ITU-R BT.601)
-    const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-    const bin  = gray < THRESHOLD ? 0 : 255;
-    d[i] = d[i + 1] = d[i + 2] = bin; // R G B
-    // d[i+3] (alpha) stays unchanged
-  }
-  ctx.putImageData(imageData, 0, 0);
+  const src = ctx.getImageData(0, 0, W, H);
+  const d   = src.data;
 
-  // Step 3 — lossless PNG output (no JPEG artifacts)
+  // Step 1 & 2 — grayscale + contrast 150% in-place
+  // contrast formula: out = clamp((v - 128) * factor + 128)
+  const CONTRAST = 1.5;
+  const gray = new Uint8Array(W * H); // grayscale channel only
+  for (let p = 0; p < W * H; p++) {
+    const i = p * 4;
+    const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    const c = Math.max(0, Math.min(255, (g - 128) * CONTRAST + 128));
+    gray[p] = c;
+  }
+
+  // Step 3 — sharpen with 3×3 kernel: center=5, neighbours=-1 (cross only)
+  //  [ 0 -1  0 ]
+  //  [-1  5 -1 ]
+  //  [ 0 -1  0 ]
+  const out = new Uint8Array(W * H);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const p  = y * W + x;
+      const c  = gray[p] * 5;
+      const n  = y > 0     ? gray[(y - 1) * W + x] : gray[p];
+      const s  = y < H - 1 ? gray[(y + 1) * W + x] : gray[p];
+      const ww = x > 0     ? gray[y * W + (x - 1)] : gray[p];
+      const e  = x < W - 1 ? gray[y * W + (x + 1)] : gray[p];
+      out[p] = Math.max(0, Math.min(255, c - n - s - ww - e));
+    }
+  }
+
+  // Step 4 — write back as grayscale RGB
+  const result = ctx.createImageData(W, H);
+  const rd = result.data;
+  for (let p = 0; p < W * H; p++) {
+    const i = p * 4;
+    rd[i] = rd[i + 1] = rd[i + 2] = out[p];
+    rd[i + 3] = 255;
+  }
+  ctx.putImageData(result, 0, 0);
+
+  // Step 5 — lossless PNG output
   return new Promise<string>((resolve, reject) => {
     canvas.toBlob((b) => {
       if (!b) { reject(new Error('DARKROOM_FAILED')); return; }
@@ -188,10 +224,17 @@ RULE 2 — NO INVENTION:
 
 RULE 3 — UNCLEAR CHARACTERS:
   If a character is unreadable, write * (asterisk). Do not substitute a "likely" letter.
+  If a whole word looks like an unclear mix of shapes, write it exactly as you see it — even
+  if it looks like nonsense. Do NOT replace it with a similar food item you know.
 
 RULE 4 — ZERO CREATIVITY:
   You are not a restaurant expert. You do not know food names. You only see shapes on paper.
   Treat every word — Hebrew, English, or mixed — as an unknown sequence of shapes.
+
+RULE 5 — CONFIDENCE MARKER:
+  If you are not 100% certain about a word, append a ? directly after it (no space).
+  Examples: "במבוק? ערק"  /  "ג'ימזונה? ×2"  /  "קוק?טייל"
+  This applies to both raw_lines and items[].name — use the same marked string in both.
 
 ═══ RECEIPT LAYOUT (Tabit system) ═══
 Each item line: PRICE on LEFT, then QUANTITY (1 2 3…), then ITEM NAME in Hebrew on right.
