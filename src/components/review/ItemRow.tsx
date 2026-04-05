@@ -38,7 +38,7 @@ interface Props {
   onDelete: (id: string) => void;
   onUpdateItem: (id: string, changes: Partial<ReceiptItem>) => void;
   onEditFieldChange: (field: 'name' | 'price' | 'quantity') => void;
-  priceInputRef?: React.RefObject<HTMLInputElement>;
+  priceInputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
 export function ItemRow({

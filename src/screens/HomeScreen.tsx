@@ -1,7 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Upload, Receipt, Zap, Camera, Settings } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { useSession } from '../context/SplitSessionContext';
 import { useAuth } from '../context/AuthContext';
 import { prepareImage } from '../utils/imageResize';
@@ -22,6 +21,7 @@ type Stage = 'home' | 'guide' | 'preview';
 export function HomeScreen() {
   const { setScreen, setReceiptData, scanError, setScanError, setTranscript, setProcessingPhase, setDebugImageUrl } = useSession();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const scanningRef = useRef(false);
@@ -123,35 +123,32 @@ export function HomeScreen() {
       });
       let message: string | null = null;
       if (raw.includes('BLURRY')) {
-        message = "The photo came out a bit blurry. Try holding the phone steadier and shoot again.";
+        message = t('errors.BLURRY');
       } else if (raw.includes('CROPPED')) {
-        message = "Part of the receipt looks cut off. Make sure all edges are in frame.";
+        message = t('errors.CROPPED');
       } else if (raw.includes('LOW_LIGHT')) {
-        message = "It's too dark here. Try turning on a light or using flash.";
+        message = t('errors.LOW_LIGHT');
       } else if (raw.includes('OCCLUDED')) {
-        message = "Something is covering the text. Try shooting again with the receipt fully exposed.";
+        message = t('errors.OCCLUDED');
       } else if (raw.includes('NOT_A_RECEIPT')) {
-        message = "We couldn't identify a receipt here. Make sure you're photographing a clear bill or receipt.";
+        message = t('errors.NOT_A_RECEIPT');
       } else if (raw.includes('NO_ITEMS_FOUND')) {
-        message = "We couldn't find any items. Try a better-lit photo.";
+        message = t('errors.NO_ITEMS_FOUND');
       } else if (raw.includes('SCAN_LIMIT_REACHED')) {
         setReceiptData([], {});
         setScreen('home');
         setShowPaywall(true);
         return;
       } else if (raw.includes('ANTHROPIC_AUTH_ERROR')) {
-        message = "OCR authentication failed. Please check the API key configuration.";
+        message = t('errors.ANTHROPIC_AUTH_ERROR');
       } else if (raw.includes('MODEL_ABORTED')) {
-        message = "The scan was blocked by a content filter. Try a different photo or retake from a cleaner angle.";
+        message = t('errors.MODEL_ABORTED');
       } else if (raw.includes('DAILY_QUOTA_EXCEEDED')) {
-        message = 'Daily scan limit reached. Please try again tomorrow or add billing to your Gemini API project.';
+        message = t('errors.DAILY_QUOTA_EXCEEDED');
       } else if (raw.includes('TOO_MANY_REQUESTS') || raw.includes('429')) {
-        const delayMatch = raw.match(/TOO_MANY_REQUESTS:(\d+s)/);
-        message = delayMatch
-          ? `Rate limit reached. Please wait ${delayMatch[1]} before scanning again.`
-          : 'Rate limit reached. Please wait a moment before scanning again.';
+        message = t('errors.TOO_MANY_REQUESTS');
       } else {
-        message = "Something went wrong. Please try again.";
+        message = t('errors.GENERIC');
       }
       setScanError(message);
       setReceiptData([], {});
@@ -245,7 +242,7 @@ export function HomeScreen() {
         >
           <div className="flex items-center gap-1 px-3 py-1 bg-accent/10 rounded-full">
             <Zap className="w-3 h-3 text-accent" />
-            <span className="text-xs font-semibold text-accent">AI Powered</span>
+            <span className="text-xs font-semibold text-accent">{t('home.aiPowered')}</span>
           </div>
           <button
             onClick={() => setScreen('settings')}
@@ -278,8 +275,8 @@ export function HomeScreen() {
 
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-white/50 text-xs uppercase tracking-wider font-semibold">Start here</p>
-                <p className="text-white/80 text-sm">Scan or upload a receipt</p>
+                <p className="text-white/50 text-xs uppercase tracking-wider font-semibold">{t('home.startHere')}</p>
+                <p className="text-white/80 text-sm">{t('home.scanOrUpload')}</p>
               </div>
               <motion.button
                 data-coach-step="1"
@@ -312,13 +309,13 @@ export function HomeScreen() {
             className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl border-2 border-border bg-surface text-primary text-sm font-medium active:scale-95 transition-transform"
           >
             <Upload className="w-4 h-4" />
-            Upload Photo
+            {t('home.uploadPhoto')}
           </button>
           <button
             onClick={() => { setReceiptData([], {}); setScreen('review'); }}
             className="flex-1 py-3.5 rounded-2xl bg-primary/5 text-primary text-sm font-medium active:scale-95 transition-transform"
           >
-            Add manually
+            {t('home.addManually')}
           </button>
         </motion.div>
 
@@ -330,11 +327,11 @@ export function HomeScreen() {
           className="grid grid-cols-2 gap-3"
         >
           <div className="bg-surface border border-border rounded-2xl p-4">
-            <p className="text-xs text-muted font-medium mb-1">Active Groups</p>
+            <p className="text-xs text-muted font-medium mb-1">{t('home.activeGroups')}</p>
             <p className="font-display text-2xl font-bold text-primary">—</p>
           </div>
           <div className="bg-surface border border-border rounded-2xl p-4">
-            <p className="text-xs text-muted font-medium mb-1">Last 7 Days</p>
+            <p className="text-xs text-muted font-medium mb-1">{t('home.last7Days')}</p>
             <p className="font-display text-2xl font-bold text-primary">—</p>
           </div>
         </motion.div>
@@ -346,7 +343,7 @@ export function HomeScreen() {
           transition={{ delay: 0.4 }}
         >
           <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">
-            Recent Activity
+            {t('home.recentActivity')}
           </h3>
 
           {historyLoading && (
@@ -356,8 +353,8 @@ export function HomeScreen() {
           {!historyLoading && history.length === 0 && (
             <div className="bg-white border border-gray-100 rounded-2xl p-6 text-center">
               <p className="text-2xl mb-2">📭</p>
-              <p className="text-sm text-gray-400">No recent splits yet</p>
-              <p className="text-xs text-gray-300 mt-1">Your scan history will appear here</p>
+              <p className="text-sm text-gray-400">{t('home.noHistory')}</p>
+              <p className="text-xs text-gray-300 mt-1">{t('home.noHistoryHint')}</p>
             </div>
           )}
 
@@ -385,7 +382,7 @@ export function HomeScreen() {
       </div>
 
       <div className="pb-8 text-center mt-4">
-        <p className="text-muted text-xs">Powered by Gemini Vision AI</p>
+        <p className="text-muted text-xs">{t('home.poweredBy')}</p>
       </div>
 
       {/* Hidden inputs */}
