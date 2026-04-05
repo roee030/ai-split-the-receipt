@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { useSession } from '../context/SplitSessionContext';
 import { calculateAllTotals } from '../services/splitCalculator';
 import { AnimatedNumber } from '../components/common/AnimatedNumber';
@@ -8,6 +9,7 @@ import { getCurrencySymbol } from '../utils/currency';
 export function RoundRobinScreen() {
   const { session } = useSession();
   const { people, receiptItems, claims, tip, tax, serviceCharge, currency } = session;
+  const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [done, setDone] = useState(false);
@@ -44,13 +46,13 @@ export function RoundRobinScreen() {
         >
           ✅
         </motion.div>
-        <h2 className="font-display text-3xl font-bold text-white mb-2">All done!</h2>
-        <p className="text-white/80 mb-8">Everyone's seen their total</p>
+        <h2 className="font-display text-3xl font-bold text-white mb-2">{t('roundRobin.allDone')}</h2>
+        <p className="text-white/80 mb-8">{t('roundRobin.everyoneSeenTotal')}</p>
         <button
           onClick={() => window.history.back()}
           className="px-8 py-4 bg-white text-success font-bold rounded-2xl"
         >
-          Back to Summary
+          {t('roundRobin.backToSummary')}
         </button>
       </div>
     );
@@ -59,7 +61,7 @@ export function RoundRobinScreen() {
   if (!current) {
     return (
       <div className="min-h-screen bg-bg flex items-center justify-center">
-        <p className="text-muted">No people to show</p>
+        <p className="text-muted">{t('roundRobin.noPeople')}</p>
       </div>
     );
   }
@@ -75,18 +77,18 @@ export function RoundRobinScreen() {
         >
           <div className="text-5xl">📱</div>
           <div>
-            <p className="text-muted text-sm mb-2">Pass phone to</p>
+            <p className="text-muted text-sm mb-2">{t('roundRobin.passPhoneTo')}</p>
             <h2 className="font-display text-4xl font-bold text-primary">{current.name}</h2>
           </div>
           <p className="text-muted text-sm">
-            ({currentIndex + 1} of {people.length})
+            {t('roundRobin.ofPeople', { current: currentIndex + 1, total: people.length })}
           </p>
           <motion.button
             onClick={() => setRevealed(true)}
             className="mt-4 px-10 py-5 bg-primary text-white text-lg font-bold rounded-3xl shadow-xl"
             whileTap={{ scale: 0.96 }}
           >
-            Show my total →
+            {t('roundRobin.showTotal')}
           </motion.button>
         </motion.div>
       </div>
@@ -111,7 +113,7 @@ export function RoundRobinScreen() {
           >
             {current.avatar}
           </div>
-          <p className="text-muted text-sm">{current.name}, you owe</p>
+          <p className="text-muted text-sm">{t('roundRobin.youOwe', { name: current.name })}</p>
           <div className="font-display text-6xl font-bold text-primary">
             {getCurrencySymbol(currency)}
             <AnimatedNumber value={currentTotal?.total ?? 0} format={(n) => n.toFixed(2)} />
@@ -121,7 +123,7 @@ export function RoundRobinScreen() {
           <div className="w-full mt-4 space-y-2 bg-surface/80 rounded-2xl p-4">
             {currentTotal?.items.map((item, i) => (
               <div key={i} className="flex justify-between text-sm text-muted">
-                <span>{item.name}{item.shared ? ' (shared)' : ''}</span>
+                <span>{item.name}{item.shared ? ` ${t('roundRobin.shared')}` : ''}</span>
                 <span>{getCurrencySymbol(currency)}{item.amount.toFixed(2)}</span>
               </div>
             ))}
@@ -133,8 +135,8 @@ export function RoundRobinScreen() {
             whileTap={{ scale: 0.96 }}
           >
             {currentIndex < people.length - 1
-              ? `Done — Pass to ${people[currentIndex + 1]?.name} →`
-              : 'Finish ✓'}
+              ? t('roundRobin.donePassTo', { name: people[currentIndex + 1]?.name })
+              : t('roundRobin.finish')}
           </motion.button>
         </motion.div>
       </AnimatePresence>

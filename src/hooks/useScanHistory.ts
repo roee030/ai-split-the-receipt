@@ -19,7 +19,11 @@ export function useScanHistory() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) { setHistory([]); setError(null); return; }
+    if (!user) {
+      setHistory([]); // eslint-disable-line react-hooks/set-state-in-effect
+      setError(null);
+      return;
+    }
 
     setLoading(true);
     setError(null);

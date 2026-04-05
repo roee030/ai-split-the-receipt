@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Upload, Receipt, Zap, Camera, Settings } from 'lucide-react';
 import { useSession } from '../context/SplitSessionContext';

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { BackButton } from '../components/common/BackButton';
 import { useSession } from '../context/SplitSessionContext';
 import { ScreenContainer } from '../components/common/ScreenContainer';
@@ -12,6 +13,7 @@ const TIP_PRESETS = [10, 12, 15, 18, 20];
 export function TipScreen() {
   const { session, setScreen, setTip, setTax } = useSession();
   const { tip, tax, currency, people, receiptItems, claims, serviceCharge } = session;
+  const { t } = useTranslation();
   const [customTip, setCustomTip] = useState('');
 
   const totals = calculateAllTotals(
@@ -41,14 +43,14 @@ export function TipScreen() {
           <BackButton screen="tip" />
           <p className="text-xs font-semibold text-muted">SplitSnap</p>
         </div>
-        <h2 className="font-display text-3xl font-bold text-primary">Tip & Tax</h2>
-        <p className="text-muted text-sm mt-1">How much would you like to tip?</p>
+        <h2 className="font-display text-3xl font-bold text-primary">{t('tip.title')}</h2>
+        <p className="text-muted text-sm mt-1">{t('tip.subtitle')}</p>
       </div>
 
       <div className="px-5 space-y-5 pb-32 overflow-y-auto flex-1">
         {/* Tip presets */}
         <div>
-          <p className="text-xs font-bold text-primary uppercase tracking-widest mb-3">Tip Amount</p>
+          <p className="text-xs font-bold text-primary uppercase tracking-widest mb-3">{t('tip.amount')}</p>
           <div className="grid grid-cols-5 gap-2 mb-3">
             {TIP_PRESETS.map((pct) => (
               <motion.button
@@ -67,7 +69,7 @@ export function TipScreen() {
           </div>
           <input
             type="number"
-            placeholder="Custom %"
+            placeholder={t('tip.customPct')}
             value={customTip}
             onChange={(e) => handleCustom(e.target.value)}
             className="w-full px-4 py-3 border border-border rounded-2xl text-sm bg-surface outline-none focus:border-accent"
@@ -76,7 +78,7 @@ export function TipScreen() {
 
         {/* Split mode */}
         <div>
-          <p className="text-xs font-bold text-primary uppercase tracking-widest mb-3">Split Tip By</p>
+          <p className="text-xs font-bold text-primary uppercase tracking-widest mb-3">{t('tip.splitBy')}</p>
           <div className="grid grid-cols-2 gap-2">
             {(['proportional', 'equal'] as const).map((mode) => (
               <motion.button
@@ -89,7 +91,7 @@ export function TipScreen() {
                 }`}
                 whileTap={{ scale: 0.97 }}
               >
-                {mode === 'proportional' ? 'By order size' : 'Split equally'}
+                {mode === 'proportional' ? t('tip.byOrderSize') : t('tip.splitEqually')}
               </motion.button>
             ))}
           </div>
@@ -97,10 +99,10 @@ export function TipScreen() {
 
         {/* Tax */}
         <div>
-          <p className="text-xs font-bold text-primary uppercase tracking-widest mb-3">Tax</p>
+          <p className="text-xs font-bold text-primary uppercase tracking-widest mb-3">{t('tip.tax')}</p>
           {currency === 'ILS' ? (
             <div className="px-4 py-3.5 bg-surface border border-border rounded-2xl">
-              <p className="text-sm text-muted">✓ Included in prices (Israeli VAT)</p>
+              <p className="text-sm text-muted">{t('tip.taxIncluded')}</p>
             </div>
           ) : (
             <div className="flex items-center gap-3">
@@ -118,10 +120,10 @@ export function TipScreen() {
 
         {/* Live preview */}
         <div>
-          <p className="text-xs font-bold text-primary uppercase tracking-widest mb-3">Preview</p>
+          <p className="text-xs font-bold text-primary uppercase tracking-widest mb-3">{t('tip.preview')}</p>
           <div className="bg-surface rounded-2xl border border-border overflow-hidden">
             {people.map((person) => {
-              const t = totals[person.id];
+              const t2 = totals[person.id];
               return (
                 <div key={person.id} className="flex items-center justify-between px-4 py-3.5 border-b border-border last:border-b-0">
                   <div className="flex items-center gap-3">
@@ -133,12 +135,12 @@ export function TipScreen() {
                     </div>
                     <span className="text-sm font-medium text-primary">{person.name}</span>
                   </div>
-                  <CurrencyDisplay amount={t?.total ?? 0} currency={currency} className="text-sm font-bold text-primary" />
+                  <CurrencyDisplay amount={t2?.total ?? 0} currency={currency} className="text-sm font-bold text-primary" />
                 </div>
               );
             })}
             {people.length === 0 && (
-              <div className="px-4 py-6 text-center text-sm text-muted">No people added yet</div>
+              <div className="px-4 py-6 text-center text-sm text-muted">{t('tip.noPeople')}</div>
             )}
           </div>
         </div>
@@ -151,7 +153,7 @@ export function TipScreen() {
           className="w-full flex items-center justify-center gap-2 py-4 bg-accent text-white font-bold rounded-2xl shadow-lg shadow-accent/30"
           whileTap={{ scale: 0.97 }}
         >
-          View Summary
+          {t('tip.viewSummary')}
           <ChevronRight className="w-5 h-5" />
         </motion.button>
       </div>

@@ -8,9 +8,9 @@ export function sentryCapture(err: Error, ctx?: Record<string, unknown>): void {
   posthog.captureException(err, ctx);
 }
 
-export function sentryIdentify(_userId: string, _email?: string): void {
-  // Identity is managed by posthog.identify() in posthog.ts
-}
+// Parameters are intentionally unused stubs — identity is managed by posthog.ts
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function sentryIdentify(_userId: string, _email?: string): void {}
 
 export function sentryReset(): void {
   // Reset is managed by posthog.reset() in posthog.ts

@@ -18,6 +18,7 @@ export function CoachMarkOverlay() {
 
   useLayoutEffect(() => {
     if (currentStep === null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTargetRect(null);
       return;
     }

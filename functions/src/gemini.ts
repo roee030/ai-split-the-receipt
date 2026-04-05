@@ -58,7 +58,7 @@ export async function callGemini(
             return;
           }
           resolve(JSON.parse(text));
-        } catch (e) {
+        } catch {
           reject(new Error("PARSE_ERROR"));
         }
       });

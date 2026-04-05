@@ -16,6 +16,7 @@ export function ProcessingScreen() {
 
   // Reset index whenever phase changes so we start fresh
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMsgIndex(0);
   }, [phase]);
 

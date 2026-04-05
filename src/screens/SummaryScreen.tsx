@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Share2, RotateCcw, CheckCircle, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { BackButton } from '../components/common/BackButton';
 import { useSession } from '../context/SplitSessionContext';
 import { ScreenContainer } from '../components/common/ScreenContainer';
@@ -13,6 +14,7 @@ import { monitoring } from '../monitoring';
 export function SummaryScreen() {
   const { session, setScreen, reset } = useSession();
   const { people, receiptItems, claims, tip, tax, serviceCharge, currency, restaurantName } = session;
+  const { t } = useTranslation();
 
   useEffect(() => {
     monitoring.track('split_completed', {
@@ -61,7 +63,7 @@ export function SummaryScreen() {
         </div>
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="font-display text-3xl font-bold text-primary">Summary</h2>
+            <h2 className="font-display text-3xl font-bold text-primary">{t('summary.title')}</h2>
             <p className="text-muted text-sm mt-1">{restaurantName ?? 'Bill Split'}</p>
           </div>
           {checksOut ? (
@@ -82,7 +84,7 @@ export function SummaryScreen() {
       <div className="px-5 mb-4">
         <div className="rounded-2xl px-5 py-4 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #0D0D1A 0%, #1a1040 100%)' }}>
           <div>
-            <p className="text-white/50 text-xs uppercase tracking-wider font-semibold">Grand Total</p>
+            <p className="text-white/50 text-xs uppercase tracking-wider font-semibold">{t('review.grandTotal')}</p>
             <CurrencyDisplay amount={grandTotal} currency={currency} className="font-display text-2xl font-bold text-white" />
           </div>
           <div>
@@ -93,7 +95,7 @@ export function SummaryScreen() {
       </div>
 
       <div data-coach-step="4" className="flex-1 overflow-y-auto px-5 pb-40 space-y-3">
-        <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">The Ledger</p>
+        <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">{t('people.theLedger')}</p>
         {people.map((person, i) => (
           <SummaryCard
             key={person.id}
@@ -117,7 +119,7 @@ export function SummaryScreen() {
             whileTap={{ scale: 0.97 }}
           >
             <Share2 className="w-4 h-4" />
-            Share All
+            {t('summary.share')}
           </motion.button>
           <motion.button
             onClick={() => setScreen('roundrobin')}
@@ -132,7 +134,7 @@ export function SummaryScreen() {
           className="w-full flex items-center justify-center gap-2 py-3 text-muted text-sm"
         >
           <RotateCcw className="w-4 h-4" />
-          Start over
+          {t('summary.newSplit')}
         </button>
       </div>
     </ScreenContainer>

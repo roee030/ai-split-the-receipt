@@ -52,8 +52,7 @@ export function PaywallModal({ open, onDismiss, onUnlocked }: PaywallModalProps)
       });
 
       // Wait for Stripe extension to write the checkout URL (up to 15s)
-      let unsubscribe: (() => void) | undefined;
-      unsubscribe = onSnapshot(docRef, (snap) => {
+      const unsubscribe = onSnapshot(docRef, (snap) => {
         const data = snap.data();
         const url = data?.url as string | undefined;
         const error = data?.error as string | undefined;
