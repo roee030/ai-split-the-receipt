@@ -1,11 +1,43 @@
 {
   "app": { "name": "SplitSnap" },
   "home": {
-    "title": "Divisez l'addition,\npas l'amitié",
+    "title": "Transformez vos\nreçus en\nregistres sociaux.",
     "scan": "Scanner le reçu",
     "recentActivity": "Activité récente",
     "noHistory": "Pas encore de divisions récentes",
-    "noHistoryHint": "Votre historique de scans apparaîtra ici"
+    "noHistoryHint": "Votre historique de scans apparaîtra ici",
+    "aiPowered": "Propulsé par l'IA",
+    "startHere": "Commencez ici",
+    "scanOrUpload": "Scannez ou importez un reçu",
+    "uploadPhoto": "Importer une photo",
+    "addManually": "Ajouter manuellement",
+    "activeGroups": "Groupes actifs",
+    "last7Days": "7 derniers jours",
+    "poweredBy": "Propulsé par Gemini Vision AI",
+    "photoTips": {
+      "title": "Conseils photo",
+      "forBestResults": "Pour de meilleurs résultats, assurez-vous que votre photo :",
+      "openCamera": "Ouvrir la caméra",
+      "reviewPhoto": "Vérifier la photo",
+      "checkBeforeScanning": "Vérifiez avant de scanner",
+      "retake": "Reprendre",
+      "wellLit": "Bien éclairée",
+      "fullReceipt": "Reçu complet visible",
+      "textReadable": "Texte lisible",
+      "notBlurry": "Pas floue"
+    },
+    "scanButton": {
+      "scanning": "SCANNER",
+      "waitSeconds": "{{count}}s"
+    },
+    "errorTitles": {
+      "rateLimit": "⏳ Limite de débit atteinte",
+      "notAReceipt": "🤔 Pas un reçu",
+      "nothingDetected": "🔍 Rien détecté",
+      "photoIssue": "📷 Problème de photo",
+      "failed": "⚠️ Scan échoué"
+    },
+    "dismiss": "Ignorer"
   },
   "errors": {
     "BLURRY": "La photo est un peu floue. Essayez de tenir votre téléphone plus stable et reprenez la photo.",
@@ -14,8 +46,11 @@
     "OCCLUDED": "Quelque chose couvre le texte — peut-être un doigt ? Réessayez avec le reçu entièrement visible.",
     "NOT_A_RECEIPT": "Nous n'avons pas pu identifier un reçu ici. Assurez-vous de photographier une facture claire.",
     "NO_ITEMS_FOUND": "Nous n'avons trouvé aucun article. Essayez avec une photo mieux éclairée.",
-    "TOO_MANY_REQUESTS": "Trop de requêtes. Veuillez patienter un moment et réessayer.",
+    "TOO_MANY_REQUESTS": "Limite de débit atteinte. Veuillez patienter un moment avant de scanner à nouveau.",
     "RATE_LIMITED": "Veuillez patienter un moment avant de scanner à nouveau.",
+    "DAILY_QUOTA_EXCEEDED": "Limite de scans journalière atteinte. Veuillez réessayer demain ou ajouter une facturation à votre projet Gemini API.",
+    "ANTHROPIC_AUTH_ERROR": "Échec d'authentification OCR. Veuillez vérifier la configuration de la clé API.",
+    "MODEL_ABORTED": "Le scan a été bloqué par un filtre de contenu. Essayez une autre photo ou reprenez depuis un angle plus net.",
     "GENERIC": "Une erreur s'est produite. Veuillez réessayer."
   },
   "scan": {
@@ -27,17 +62,80 @@
       "readable": "Les prix et noms d'articles doivent être lisibles"
     }
   },
+  "processing": {
+    "phases": {
+      "scanning": "Scan en cours",
+      "analyzing": "Analyse en cours"
+    },
+    "scanningMessages": [
+      "Scan de votre reçu...",
+      "Lecture de chaque caractère...",
+      "Capture du texte..."
+    ],
+    "analyzingMessages": [
+      "Analyse des articles...",
+      "Association des noms aux prix...",
+      "Calcul des totaux...",
+      "Presque terminé..."
+    ]
+  },
   "review": {
     "title": "Réviser les articles",
+    "merchant": "Commerçant",
+    "yourReceipt": "Votre reçu",
+    "grandTotal": "Total général",
+    "precisionScan": "Scan de précision actif",
+    "itemsDetected_one": "{{count}} article détecté",
+    "itemsDetected_other": "{{count}} articles détectés",
+    "identifyGratuity": "Identifier le pourboire",
+    "serviceChargeDetected": "Frais de service de {{amount}} détectés",
+    "asTip": "En pourboire",
+    "keep": "Garder",
     "lowConfidence": "Certains articles peuvent nécessiter une vérification — veuillez réviser attentivement",
-    "subtotalMismatch": "Le total des articles ne correspond pas au sous-total du reçu"
+    "lowConfidenceDetail": "Faible confiance du scan — le reçu peut être flou ou partiellement coupé. Veuillez vérifier chaque nom d'article et prix attentivement avant de continuer.",
+    "subtotalMismatch": "Le total des articles ne correspond pas au sous-total du reçu",
+    "magicFixFailed": "Gemini n'a pas pu résoudre la différence — veuillez vérifier les articles manuellement.",
+    "magicFixButton": "✨ Correction magique",
+    "magicFixLoading": "⏳ Consultation de Gemini…",
+    "autoFixed": "✅ Corrigé automatiquement — prix réconciliés.",
+    "itemizedLedger": "Registre détaillé",
+    "addItem": "Ajouter un article",
+    "subtotal": "Sous-total",
+    "confirm": "Confirmer",
+    "tax": "Taxe",
+    "noItems": "Pas encore d'articles. Appuyez sur \"Ajouter un article\" ci-dessus.",
+    "flaggedItem": "⚠️ Le prix unitaire a été recalculé à partir du total facturé. Veuillez vérifier.",
+    "itemNamePlaceholder": "Nom de l'article",
+    "done": "Terminé"
   },
   "people": {
     "title": "Qui partage ?",
+    "whosJoining": "Qui\nparticipe ?",
+    "chooseHowSettle": "Choisissez comment vous souhaitez régler ce registre. Commencez à diviser avec des personnes.",
     "addPerson": "Ajouter une personne",
     "justMe": "Juste moi",
+    "justMeDesc": "Réclamation individuelle de toute la facture",
+    "wholeTable": "Toute la table",
+    "wholeTableDesc": "Tout le monde divise ensemble",
+    "someOfUs": "Certains d'entre nous",
+    "someOfUsDesc": "Choisissez les invités pour diviser",
     "allOfUs": "Nous tous",
-    "someOfUs": "Certains d'entre nous"
+    "changeMode": "Changer de mode",
+    "addEveryone": "Ajoutez tout le monde à la table.",
+    "addPeopleWith": "Ajoutez les personnes qui divisent avec vous.",
+    "theLedger": "Le registre",
+    "personAdded_one": "{{count}} personne ajoutée",
+    "personAdded_other": "{{count}} personnes ajoutées",
+    "primary": "Principal",
+    "yourName": "Votre nom",
+    "namePlaceholder": "Nom",
+    "addGuestByName": "Ajouter un invité par son nom...",
+    "add": "Ajouter",
+    "quickAdd": "Ajout rapide",
+    "addNGuests": "+{{count}} invités",
+    "frequentSplitters": "Partageurs fréquents",
+    "startSplitting": "Commencer à diviser",
+    "splitMyShare": "Diviser ma part"
   },
   "claim": {
     "title": "Réclamez vos articles",
@@ -45,11 +143,38 @@
     "seeTotal": "Voir mon total",
     "done": "Terminé →"
   },
+  "tip": {
+    "title": "Pourboire et taxe",
+    "subtitle": "Combien souhaitez-vous laisser en pourboire ?",
+    "amount": "Montant du pourboire",
+    "customPct": "% personnalisé",
+    "splitBy": "Répartir le pourboire par",
+    "byOrderSize": "Par taille de commande",
+    "splitEqually": "Répartir également",
+    "tax": "Taxe",
+    "taxIncluded": "✓ Inclus dans les prix (TVA israélienne)",
+    "preview": "Aperçu",
+    "noPeople": "Personne ajoutée pour l'instant",
+    "viewSummary": "Voir le résumé"
+  },
   "summary": {
     "title": "Résumé",
     "total": "Total",
     "share": "Partager",
     "newSplit": "Nouveau partage"
+  },
+  "roundRobin": {
+    "allDone": "Tout est fait !",
+    "everyoneSeenTotal": "Tout le monde a vu son total",
+    "backToSummary": "Retour au résumé",
+    "noPeople": "Personne à afficher",
+    "passPhoneTo": "Passez le téléphone à",
+    "ofPeople": "({{current}} sur {{total}})",
+    "showTotal": "Afficher mon total →",
+    "youOwe": "{{name}}, vous devez",
+    "shared": "(partagé)",
+    "donePassTo": "Terminé — Passer à {{name}} →",
+    "finish": "Terminer ✓"
   },
   "auth": {
     "signIn": "Connectez-vous pour continuer",
@@ -120,5 +245,10 @@
     "next": "Suivant →",
     "done": "Terminé ✓",
     "skip": "Passer la visite"
+  },
+  "errorBoundary": {
+    "title": "Une erreur s'est produite",
+    "message": "Une erreur inattendue s'est produite. Vos données sont en sécurité — veuillez recharger l'application.",
+    "reload": "Recharger l'app"
   }
 }

@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, Receipt, Zap, Camera, X, RotateCcw, ChevronRight, Settings } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Upload, Receipt, Zap, Camera, Settings } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useSession } from '../context/SplitSessionContext';
 import { useAuth } from '../context/AuthContext';
 import { prepareImage } from '../utils/imageResize';
@@ -12,13 +13,9 @@ import { getLocalScansUsed, incrementLocalScansUsed } from '../hooks/useSplitSes
 import { monitoring } from '../monitoring';
 import { useScanHistory } from '../hooks/useScanHistory';
 import { formatScanDate } from '../utils/formatDate';
-
-const CAMERA_TIPS = [
-  { icon: '💡', text: 'Good lighting — avoid shadows & glare' },
-  { icon: '📃', text: 'Full receipt in frame, top to bottom' },
-  { icon: '📐', text: 'Keep it flat and steady' },
-  { icon: '🔍', text: 'Prices and item names must be readable' },
-];
+import { ScanErrorBanner } from '../components/home/ScanErrorBanner';
+import { CameraGuideOverlay } from '../components/home/CameraGuideOverlay';
+import { PhotoPreviewOverlay } from '../components/home/PhotoPreviewOverlay';
 
 type Stage = 'home' | 'guide' | 'preview';
 
@@ -261,33 +258,7 @@ export function HomeScreen() {
       </div>
 
       {/* Error banner */}
-      <div role="alert" aria-live="polite">
-      <AnimatePresence>
-        {scanError && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="mx-5 mb-4 p-4 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-700"
-          >
-            <p className="font-semibold mb-0.5">
-              {scanError.includes('wait a moment') ? '⏳ Rate limit hit'
-                : scanError.includes("identify a receipt") ? '🤔 Not a receipt'
-                : scanError.includes("find any items") ? '🔍 Nothing detected'
-                : scanError.includes('blurry') || scanError.includes('dark') || scanError.includes('cut off') || scanError.includes('covering') ? '📷 Photo issue'
-                : '⚠️ Scan failed'}
-            </p>
-            <p className="text-red-600 text-xs">{scanError}</p>
-            <button
-              onClick={() => setScanError(null)}
-              className="mt-2 text-xs text-red-500 font-medium underline underline-offset-2"
-            >
-              Dismiss
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      </div>
+      <ScanErrorBanner error={scanError} onDismiss={() => setScanError(null)} />
 
       <div className="flex-1 px-5 space-y-4">
         {/* Hero dark card */}
@@ -422,59 +393,14 @@ export function HomeScreen() {
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUploadChange} />
 
       {/* Camera Guide Overlay */}
-      <AnimatePresence>
-        {stage === 'guide' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex flex-col justify-end"
-            style={{ background: 'rgba(13,13,26,0.85)' }}
-            onClick={() => setStage('home')}
-          >
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-              className="bg-surface rounded-t-3xl p-6 pb-10"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="w-10 h-1 bg-border rounded-full mx-auto mb-6" />
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="font-display text-xl font-bold text-primary">Photo Tips</h2>
-                <button onClick={() => setStage('home')} aria-label="Close" className="text-muted p-1 min-h-[44px] min-w-[44px] flex items-center justify-center">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <p className="text-muted text-sm mb-5">For best results, make sure your photo:</p>
-
-              <div className="space-y-3 mb-7">
-                {CAMERA_TIPS.map((tip) => (
-                  <div key={tip.text} className="flex items-center gap-3 p-3 bg-bg rounded-xl">
-                    <span className="text-xl w-8 text-center flex-shrink-0">{tip.icon}</span>
-                    <span className="text-sm font-medium text-primary">{tip.text}</span>
-                  </div>
-                ))}
-              </div>
-
-              <motion.button
-                onClick={() => {
-                  setStage('home'); // dismiss guide, camera will open
-                  setTimeout(() => cameraRef.current?.click(), 50);
-                }}
-                className="w-full py-4 rounded-2xl bg-accent text-white font-bold text-base flex items-center justify-center gap-2 shadow-lg shadow-accent/30"
-                whileTap={{ scale: 0.97 }}
-              >
-                <Camera className="w-5 h-5" />
-                Open Camera
-                <ChevronRight className="w-4 h-4" />
-              </motion.button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <CameraGuideOverlay
+        visible={stage === 'guide'}
+        onClose={() => setStage('home')}
+        onOpenCamera={() => {
+          setStage('home');
+          setTimeout(() => cameraRef.current?.click(), 50);
+        }}
+      />
 
       {/* Paywall Modal */}
       <PaywallModal
@@ -503,82 +429,13 @@ export function HomeScreen() {
       />
 
       {/* Photo Preview Overlay */}
-      <AnimatePresence>
-        {stage === 'preview' && previewUrl && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-primary flex flex-col"
-          >
-            {/* Preview header */}
-            <div className="px-5 pt-12 pb-4 flex items-center justify-between">
-              <button onClick={handleDismissPreview} className="flex items-center gap-1.5 text-white/60 text-sm font-medium">
-                <X className="w-4 h-4" />
-                Cancel
-              </button>
-              <h2 className="font-display text-base font-bold text-white">Review Photo</h2>
-              <div className="w-16" />
-            </div>
-
-            {/* Image preview */}
-            <div className="flex-1 flex items-center justify-center px-5 py-4 min-h-0">
-              <div className="relative w-full max-h-full rounded-2xl overflow-hidden border-2 border-white/20">
-                <img
-                  src={previewUrl}
-                  alt="Receipt preview"
-                  className="w-full h-full object-contain"
-                  style={{ maxHeight: 'calc(100vh - 320px)' }}
-                />
-                {/* Corner frame guides */}
-                {['top-0 left-0 border-l-2 border-t-2', 'top-0 right-0 border-r-2 border-t-2',
-                  'bottom-0 left-0 border-l-2 border-b-2', 'bottom-0 right-0 border-r-2 border-b-2'].map((cls, i) => (
-                  <div key={i} className={`absolute w-5 h-5 border-accent ${cls}`} />
-                ))}
-              </div>
-            </div>
-
-            {/* Checklist */}
-            <div className="px-5 py-3">
-              <p className="text-white/50 text-xs uppercase tracking-wider font-semibold mb-3 text-center">
-                Check before scanning
-              </p>
-              <div className="grid grid-cols-2 gap-2 mb-5">
-                {[
-                  { icon: '💡', label: 'Well lit' },
-                  { icon: '📃', label: 'Full receipt visible' },
-                  { icon: '🔍', label: 'Text is readable' },
-                  { icon: '📐', label: 'Not blurry' },
-                ].map((item) => (
-                  <div key={item.label} className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2">
-                    <span className="text-base">{item.icon}</span>
-                    <span className="text-white/80 text-xs font-medium">{item.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Action buttons */}
-            <div className="px-5 pb-10 flex gap-3">
-              <button
-                onClick={handleRetake}
-                className="flex items-center justify-center gap-2 px-5 py-4 rounded-2xl border border-white/20 text-white font-semibold text-sm active:scale-95 transition-transform"
-              >
-                <RotateCcw className="w-4 h-4" />
-                Retake
-              </button>
-              <motion.button
-                onClick={handleConfirmScan}
-                className="flex-1 py-4 rounded-2xl bg-accent text-white font-bold text-base flex items-center justify-center gap-2 shadow-lg shadow-accent/40"
-                whileTap={{ scale: 0.97 }}
-              >
-                Scan Receipt
-                <ChevronRight className="w-5 h-5" />
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <PhotoPreviewOverlay
+        visible={stage === 'preview'}
+        previewUrl={previewUrl}
+        onRetake={handleRetake}
+        onConfirm={handleConfirmScan}
+        onDismiss={handleDismissPreview}
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useSession } from '../../context/SplitSessionContext';
+import { initPostHog } from '../../monitoring';
 
 const CONSENT_KEY = 'splitsnap_consent';
 
@@ -14,6 +15,8 @@ export function ConsentBanner() {
 
   function accept() {
     localStorage.setItem(CONSENT_KEY, '1');
+    // Start analytics NOW — the user just gave informed consent.
+    initPostHog();
     setVisible(false);
   }
 

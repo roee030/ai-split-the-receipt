@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserPlus, ChevronRight, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useSession } from '../context/SplitSessionContext';
 import { ScreenContainer } from '../components/common/ScreenContainer';
 import { Avatar } from '../components/common/Avatar';
@@ -13,6 +14,7 @@ type Mode = 'pick' | 'whole' | 'some';
 export function PeopleScreen() {
   const { session, setScreen, addPerson, removePerson, updatePersonName, setSplitMode } = useSession();
   const { people } = session;
+  const { t } = useTranslation();
   const [newName, setNewName] = useState('');
   const [mode, setMode] = useState<Mode>('pick');
 
@@ -38,7 +40,7 @@ export function PeopleScreen() {
 
   const mePerson = people[0];
   const guests = people.slice(1);
-  const continueLabel = mode === 'whole' ? 'Start Splitting' : 'Split My Share';
+  const continueLabel = mode === 'whole' ? t('people.startSplitting') : t('people.splitMyShare');
 
   // Stage 1: mode picker
   if (mode === 'pick') {
@@ -50,11 +52,11 @@ export function PeopleScreen() {
             <BackButton screen="people" />
             <p className="text-xs font-semibold text-muted">SplitSnap</p>
           </div>
-          <h2 className="font-display text-4xl font-bold text-primary leading-tight mb-2">
-            Who's<br />Joining?
+          <h2 className="font-display text-4xl font-bold text-primary leading-tight mb-2" style={{ whiteSpace: 'pre-line' }}>
+            {t('people.whosJoining')}
           </h2>
           <p className="text-muted text-sm">
-            Choose how you want to settle this ledger. Start splitting with people.
+            {t('people.chooseHowSettle')}
           </p>
         </div>
 
@@ -72,8 +74,8 @@ export function PeopleScreen() {
               whileTap={{ scale: 0.97 }}
             >
               <span className="text-2xl">👤</span>
-              <p className="text-xs font-semibold text-primary">Just Me</p>
-              <p className="text-[10px] text-muted leading-tight">Solo claim of the entire bill</p>
+              <p className="text-xs font-semibold text-primary">{t('people.justMe')}</p>
+              <p className="text-[10px] text-muted leading-tight">{t('people.justMeDesc')}</p>
             </motion.button>
 
             {/* Whole table */}
@@ -83,8 +85,8 @@ export function PeopleScreen() {
               whileTap={{ scale: 0.97 }}
             >
               <span className="text-2xl">👥</span>
-              <p className="text-xs font-semibold text-primary">Whole Table</p>
-              <p className="text-[10px] text-muted leading-tight">Everyone splits together</p>
+              <p className="text-xs font-semibold text-primary">{t('people.wholeTable')}</p>
+              <p className="text-[10px] text-muted leading-tight">{t('people.wholeTableDesc')}</p>
             </motion.button>
 
             {/* Some of us */}
@@ -94,8 +96,8 @@ export function PeopleScreen() {
               whileTap={{ scale: 0.97 }}
             >
               <span className="text-2xl">✂️</span>
-              <p className="text-xs font-semibold text-accent">Some of us</p>
-              <p className="text-[10px] text-accent/60 leading-tight">Pick guests to split</p>
+              <p className="text-xs font-semibold text-accent">{t('people.someOfUs')}</p>
+              <p className="text-[10px] text-accent/60 leading-tight">{t('people.someOfUsDesc')}</p>
             </motion.button>
           </div>
         </div>
@@ -114,15 +116,15 @@ export function PeopleScreen() {
             className="flex items-center gap-0.5 text-sm font-medium text-muted hover:text-primary transition-colors"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-            <span>Change mode</span>
+            <span>{t('people.changeMode')}</span>
           </button>
           <p className="text-xs font-semibold text-muted">SplitSnap</p>
         </div>
-        <h2 className="font-display text-4xl font-bold text-primary leading-tight mb-2">
-          Who's<br />Joining?
+        <h2 className="font-display text-4xl font-bold text-primary leading-tight mb-2" style={{ whiteSpace: 'pre-line' }}>
+          {t('people.whosJoining')}
         </h2>
         <p className="text-muted text-sm">
-          {mode === 'whole' ? 'Add everyone at the table.' : 'Add the people splitting with you.'}
+          {mode === 'whole' ? t('people.addEveryone') : t('people.addPeopleWith')}
         </p>
       </div>
 
@@ -131,9 +133,9 @@ export function PeopleScreen() {
         <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-display text-xs font-bold text-primary uppercase tracking-widest">
-              The Ledger
+              {t('people.theLedger')}
             </h3>
-            <span className="text-xs text-muted font-medium">{people.length} {people.length === 1 ? 'person' : 'people'} added</span>
+            <span className="text-xs text-muted font-medium">{t('people.personAdded', { count: people.length })}</span>
           </div>
 
           <div className="bg-surface border border-border rounded-2xl overflow-hidden">
@@ -153,10 +155,10 @@ export function PeopleScreen() {
                     className="flex-1 text-sm font-medium text-primary bg-transparent outline-none"
                     value={mePerson.name}
                     onChange={(e) => updatePersonName(mePerson.id, e.target.value)}
-                    placeholder="Your name"
+                    placeholder={t('people.yourName')}
                   />
                   <span className="text-[10px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-full uppercase tracking-wide">
-                    Primary
+                    {t('people.primary')}
                   </span>
                 </motion.div>
               )}
@@ -176,7 +178,7 @@ export function PeopleScreen() {
                     className="flex-1 text-sm font-medium text-primary bg-transparent outline-none"
                     value={person.name}
                     onChange={(e) => updatePersonName(person.id, e.target.value)}
-                    placeholder="Name"
+                    placeholder={t('people.namePlaceholder')}
                   />
                   <button onClick={() => removePerson(person.id)} className="text-muted p-1">
                     <X className="w-4 h-4" />
@@ -190,7 +192,7 @@ export function PeopleScreen() {
               <UserPlus className="w-4 h-4 text-muted flex-shrink-0" />
               <input
                 className="flex-1 text-sm text-primary bg-transparent outline-none placeholder:text-muted"
-                placeholder="Add guest by name..."
+                placeholder={t('people.addGuestByName')}
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
@@ -202,7 +204,7 @@ export function PeopleScreen() {
                   animate={{ scale: 1 }}
                   className="text-accent font-semibold text-sm"
                 >
-                  Add
+                  {t('people.add')}
                 </motion.button>
               )}
             </div>
@@ -211,7 +213,7 @@ export function PeopleScreen() {
 
         {/* Quick add */}
         <div>
-          <p className="text-xs text-muted font-medium mb-2">Quick add</p>
+          <p className="text-xs text-muted font-medium mb-2">{t('people.quickAdd')}</p>
           <div className="flex gap-2">
             {[2, 3, 4].map((n) => (
               <button
@@ -219,7 +221,7 @@ export function PeopleScreen() {
                 onClick={() => handleQuickAdd(n)}
                 className="px-3 py-1.5 bg-surface border border-border rounded-full text-xs text-muted font-medium"
               >
-                +{n} guests
+                {t('people.addNGuests', { count: n })}
               </button>
             ))}
           </div>
@@ -227,7 +229,7 @@ export function PeopleScreen() {
 
         {/* Frequent splitters placeholder */}
         <div>
-          <h3 className="font-display text-xs font-bold text-primary uppercase tracking-widest mb-2">Frequent Splitters</h3>
+          <h3 className="font-display text-xs font-bold text-primary uppercase tracking-widest mb-2">{t('people.frequentSplitters')}</h3>
           <p className="text-xs text-muted">—</p>
         </div>
       </div>

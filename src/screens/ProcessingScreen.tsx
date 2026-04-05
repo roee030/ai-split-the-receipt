@@ -1,25 +1,17 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { useSession } from '../context/SplitSessionContext';
-
-const SCANNING_MESSAGES = [
-  'Scanning your receipt...',
-  'Reading every character...',
-  'Capturing the text...',
-];
-
-const ANALYZING_MESSAGES = [
-  'Analyzing items...',
-  'Mapping names to prices...',
-  'Calculating totals...',
-  'Almost there...',
-];
 
 export function ProcessingScreen() {
   const { session } = useSession();
+  const { t } = useTranslation();
   const phase = session.processingPhase;
 
-  const messages = phase === 'analyzing' ? ANALYZING_MESSAGES : SCANNING_MESSAGES;
+  const scanningMessages = t('processing.scanningMessages', { returnObjects: true }) as string[];
+  const analyzingMessages = t('processing.analyzingMessages', { returnObjects: true }) as string[];
+
+  const messages = phase === 'analyzing' ? analyzingMessages : scanningMessages;
   const [msgIndex, setMsgIndex] = useState(0);
 
   // Reset index whenever phase changes so we start fresh
@@ -34,7 +26,9 @@ export function ProcessingScreen() {
     return () => clearInterval(interval);
   }, [messages]);
 
-  const phaseLabel = phase === 'analyzing' ? 'Analyzing' : 'Scanning';
+  const scanningLabel = t('processing.phases.scanning');
+  const analyzingLabel = t('processing.phases.analyzing');
+  const phaseLabel = phase === 'analyzing' ? analyzingLabel : scanningLabel;
   const phaseStep = phase === 'analyzing' ? 2 : 1;
 
   return (
@@ -55,19 +49,19 @@ export function ProcessingScreen() {
 
       {/* Phase indicator */}
       <div className="flex items-center gap-3">
-        {(['Scanning', 'Analyzing'] as const).map((label, i) => (
+        {([scanningLabel, analyzingLabel] as const).map((label, i) => (
           <div key={label} className="flex items-center gap-2">
             {i > 0 && <span className="text-white/30 text-sm">→</span>}
             <span
               className={`text-xs font-semibold px-3 py-1 rounded-full transition-colors ${
                 label === phaseLabel
                   ? 'bg-accent text-white'
-                  : label === 'Scanning' && phaseStep === 2
+                  : label === scanningLabel && phaseStep === 2
                   ? 'bg-white/20 text-white/60'
                   : 'bg-white/10 text-white/30'
               }`}
             >
-              {label === 'Scanning' && phaseStep === 2 ? '✓ ' : ''}{label}
+              {label === scanningLabel && phaseStep === 2 ? '✓ ' : ''}{label}
             </span>
           </div>
         ))}

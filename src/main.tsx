@@ -12,7 +12,11 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import './index.css';
 
 initSentry();
-initPostHog();
+// PostHog: only initialise if the user has already accepted the consent banner.
+// First-time visitors: PostHog stays silent until they click "Accept & Continue"
+// (ConsentBanner calls initPostHog() on accept).
+// Return visitors: consent is already stored in localStorage → init immediately.
+if (localStorage.getItem('splitsnap_consent')) initPostHog();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <ErrorBoundary>

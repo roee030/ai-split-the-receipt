@@ -1,11 +1,43 @@
 {
   "app": { "name": "SplitSnap" },
   "home": {
-    "title": "לחלק את החשבון,\nלא את החברות",
+    "title": "הפוך קבלות\nלרשומות חברתיות.",
     "scan": "סרוק קבלה",
     "recentActivity": "פעילות אחרונה",
     "noHistory": "אין פיצולים אחרונים עדיין",
-    "noHistoryHint": "היסטוריית הסריקות שלך תופיע כאן"
+    "noHistoryHint": "היסטוריית הסריקות שלך תופיע כאן",
+    "aiPowered": "מופעל על ידי AI",
+    "startHere": "התחל כאן",
+    "scanOrUpload": "סרוק או העלה קבלה",
+    "uploadPhoto": "העלה תמונה",
+    "addManually": "הוסף ידנית",
+    "activeGroups": "קבוצות פעילות",
+    "last7Days": "7 ימים אחרונים",
+    "poweredBy": "מופעל על ידי Gemini Vision AI",
+    "photoTips": {
+      "title": "טיפים לצילום",
+      "forBestResults": "לתוצאות הטובות ביותר, ודא שהתמונה:",
+      "openCamera": "פתח מצלמה",
+      "reviewPhoto": "בדוק תמונה",
+      "checkBeforeScanning": "בדוק לפני סריקה",
+      "retake": "צלם מחדש",
+      "wellLit": "מואר היטב",
+      "fullReceipt": "הקבלה המלאה נראית",
+      "textReadable": "הטקסט קריא",
+      "notBlurry": "לא מטושטש"
+    },
+    "scanButton": {
+      "scanning": "סרוק",
+      "waitSeconds": "{{count}}ש'"
+    },
+    "errorTitles": {
+      "rateLimit": "⏳ חריגת קצב בקשות",
+      "notAReceipt": "🤔 לא קבלה",
+      "nothingDetected": "🔍 לא זוהה דבר",
+      "photoIssue": "📷 בעיית תמונה",
+      "failed": "⚠️ סריקה נכשלה"
+    },
+    "dismiss": "סגור"
   },
   "errors": {
     "BLURRY": "התמונה יצאה קצת מטושטשת. נסה להחזיק את הטלפון יציב יותר ולצלם שוב.",
@@ -14,8 +46,11 @@
     "OCCLUDED": "נראה שיש משהו שמסתיר את הטקסט (אולי האצבע?). נסה לצלם מחדש.",
     "NOT_A_RECEIPT": "המערכת לא זיהתה כאן קבלה. ודא שאתה מצלם חשבונית ברורה.",
     "NO_ITEMS_FOUND": "לא הצלחנו למצוא פריטים. נסה לצלם עם תאורה טובה יותר.",
-    "TOO_MANY_REQUESTS": "יותר מדי בקשות. אנא המתן רגע ונסה שוב.",
+    "TOO_MANY_REQUESTS": "הגבלת קצב בקשות. אנא המתן רגע לפני הסריקה הבאה.",
     "RATE_LIMITED": "אנא המתן רגע לפני הסריקה הבאה.",
+    "DAILY_QUOTA_EXCEEDED": "הגעת למגבלת הסריקות היומית. נסה שוב מחר או הוסף חיוב לפרויקט Gemini API שלך.",
+    "ANTHROPIC_AUTH_ERROR": "אימות OCR נכשל. אנא בדוק את הגדרות מפתח ה-API.",
+    "MODEL_ABORTED": "הסריקה נחסמה על ידי מסנן תוכן. נסה תמונה אחרת או צלם מחדש.",
     "GENERIC": "משהו השתבש. אנא נסה שוב."
   },
   "scan": {
@@ -27,17 +62,80 @@
       "readable": "מחירים ושמות פריטים חייבים להיות קריאים"
     }
   },
+  "processing": {
+    "phases": {
+      "scanning": "סריקה",
+      "analyzing": "ניתוח"
+    },
+    "scanningMessages": [
+      "סורק את הקבלה שלך...",
+      "קורא כל תו...",
+      "לוכד את הטקסט..."
+    ],
+    "analyzingMessages": [
+      "מנתח פריטים...",
+      "ממפה שמות למחירים...",
+      "מחשב סכומים...",
+      "כמעט שם..."
+    ]
+  },
   "review": {
     "title": "סקור פריטים",
+    "merchant": "מסעדה",
+    "yourReceipt": "הקבלה שלך",
+    "grandTotal": "סך הכל",
+    "precisionScan": "סריקה מדויקת פעילה",
+    "itemsDetected_one": "{{count}} פריט זוהה",
+    "itemsDetected_other": "{{count}} פריטים זוהו",
+    "identifyGratuity": "זיהוי טיפ",
+    "serviceChargeDetected": "תשלום שירות של {{amount}} זוהה",
+    "asTip": "כטיפ",
+    "keep": "השאר",
     "lowConfidence": "חלק מהפריטים עשויים להזדקק לבדיקה",
-    "subtotalMismatch": "סכום הפריטים אינו תואם את הסכום הביניים"
+    "lowConfidenceDetail": "אמון נמוך בסריקה — הקבלה עשויה להיות מטושטשת או חתוכה. אנא בדוק כל שם פריט ומחיר בקפידה לפני המשך.",
+    "subtotalMismatch": "סכום הפריטים אינו תואם את הסכום הביניים",
+    "magicFixFailed": "Gemini לא הצליח לפתור את הפער — אנא בדוק פריטים ידנית.",
+    "magicFixButton": "✨ תיקון קסם",
+    "magicFixLoading": "⏳ שואל את Gemini…",
+    "autoFixed": "✅ תוקן אוטומטית — מחירים הותאמו.",
+    "itemizedLedger": "רשימת פריטים",
+    "addItem": "הוסף פריט",
+    "subtotal": "סכום ביניים",
+    "confirm": "אשר",
+    "tax": "מס",
+    "noItems": "אין פריטים עדיין. הקש על \"הוסף פריט\" למעלה.",
+    "flaggedItem": "⚠️ מחיר היחידה חושב מחדש מהסכום הכולל. אנא אמת.",
+    "itemNamePlaceholder": "שם פריט",
+    "done": "סיום"
   },
   "people": {
     "title": "מי מתחלק?",
+    "whosJoining": "מי\nמצטרף?",
+    "chooseHowSettle": "בחר כיצד אתה רוצה לסלק את החשבון. התחל לפצל עם אנשים.",
     "addPerson": "הוסף אדם",
     "justMe": "רק אני",
+    "justMeDesc": "תביעה יחידה של כל החשבון",
+    "wholeTable": "כל השולחן",
+    "wholeTableDesc": "כולם מתחלקים יחד",
+    "someOfUs": "חלקנו",
+    "someOfUsDesc": "בחר אורחים לפיצול",
     "allOfUs": "כולנו",
-    "someOfUs": "חלקנו"
+    "changeMode": "שנה מצב",
+    "addEveryone": "הוסף את כולם בשולחן.",
+    "addPeopleWith": "הוסף את האנשים שמתחלקים איתך.",
+    "theLedger": "הרשימה",
+    "personAdded_one": "{{count}} אדם נוסף",
+    "personAdded_other": "{{count}} אנשים נוספו",
+    "primary": "ראשי",
+    "yourName": "השם שלך",
+    "namePlaceholder": "שם",
+    "addGuestByName": "הוסף אורח לפי שם...",
+    "add": "הוסף",
+    "quickAdd": "הוספה מהירה",
+    "addNGuests": "+{{count}} אורחים",
+    "frequentSplitters": "מפצלים תכופים",
+    "startSplitting": "התחל לפצל",
+    "splitMyShare": "פצל את החלק שלי"
   },
   "claim": {
     "title": "תבע את הפריטים שלך",
@@ -45,11 +143,38 @@
     "seeTotal": "ראה את הסכום שלי",
     "done": "סיום ←"
   },
+  "tip": {
+    "title": "טיפ ומס",
+    "subtitle": "כמה תרצה לתת טיפ?",
+    "amount": "סכום הטיפ",
+    "customPct": "אחוז מותאם אישית",
+    "splitBy": "חלק טיפ לפי",
+    "byOrderSize": "לפי גודל ההזמנה",
+    "splitEqually": "חלוקה שווה",
+    "tax": "מס",
+    "taxIncluded": "✓ כלול במחירים (מע\"מ ישראלי)",
+    "preview": "תצוגה מקדימה",
+    "noPeople": "לא נוספו אנשים עדיין",
+    "viewSummary": "צפה בסיכום"
+  },
   "summary": {
     "title": "סיכום",
     "total": "סה\"כ",
     "share": "שתף",
     "newSplit": "פיצול חדש"
+  },
+  "roundRobin": {
+    "allDone": "הכל סיים!",
+    "everyoneSeenTotal": "כולם ראו את הסכום שלהם",
+    "backToSummary": "חזרה לסיכום",
+    "noPeople": "אין אנשים להצגה",
+    "passPhoneTo": "העבר טלפון ל",
+    "ofPeople": "({{current}} מתוך {{total}})",
+    "showTotal": "הראה לי את הסכום שלי ←",
+    "youOwe": "{{name}}, אתה חייב",
+    "shared": "(משותף)",
+    "donePassTo": "סיום — העבר ל-{{name}} ←",
+    "finish": "סיים ✓"
   },
   "auth": {
     "signIn": "התחבר כדי להמשיך",
@@ -120,5 +245,10 @@
     "next": "הבא ←",
     "done": "סיום ✓",
     "skip": "דלג על הסיור"
+  },
+  "errorBoundary": {
+    "title": "משהו השתבש",
+    "message": "אירעה שגיאה בלתי צפויה. הנתונים שלך בטוחים — אנא טען מחדש את האפליקציה.",
+    "reload": "טען מחדש"
   }
 }

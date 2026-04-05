@@ -1,13 +1,43 @@
 {
-  "app": {
-    "name": "SplitSnap"
-  },
+  "app": { "name": "SplitSnap" },
   "home": {
-    "title": "Split the bill,\nnot the friendship",
+    "title": "Turn receipts\ninto social\nrecords.",
     "scan": "Scan Receipt",
     "recentActivity": "Recent Activity",
     "noHistory": "No recent splits yet",
-    "noHistoryHint": "Your scan history will appear here"
+    "noHistoryHint": "Your scan history will appear here",
+    "aiPowered": "AI Powered",
+    "startHere": "Start here",
+    "scanOrUpload": "Scan or upload a receipt",
+    "uploadPhoto": "Upload Photo",
+    "addManually": "Add manually",
+    "activeGroups": "Active Groups",
+    "last7Days": "Last 7 Days",
+    "poweredBy": "Powered by Gemini Vision AI",
+    "photoTips": {
+      "title": "Photo Tips",
+      "forBestResults": "For best results, make sure your photo:",
+      "openCamera": "Open Camera",
+      "reviewPhoto": "Review Photo",
+      "checkBeforeScanning": "Check before scanning",
+      "retake": "Retake",
+      "wellLit": "Well lit",
+      "fullReceipt": "Full receipt visible",
+      "textReadable": "Text is readable",
+      "notBlurry": "Not blurry"
+    },
+    "scanButton": {
+      "scanning": "SCAN",
+      "waitSeconds": "{{count}}s"
+    },
+    "errorTitles": {
+      "rateLimit": "⏳ Rate limit hit",
+      "notAReceipt": "🤔 Not a receipt",
+      "nothingDetected": "🔍 Nothing detected",
+      "photoIssue": "📷 Photo issue",
+      "failed": "⚠️ Scan failed"
+    },
+    "dismiss": "Dismiss"
   },
   "errors": {
     "BLURRY": "The photo came out a bit blurry. Try holding your phone steadier and shoot again.",
@@ -16,8 +46,11 @@
     "OCCLUDED": "Something is covering the text — maybe a finger? Try again with the receipt fully exposed.",
     "NOT_A_RECEIPT": "We couldn't identify a receipt here. Make sure you're photographing a clear bill.",
     "NO_ITEMS_FOUND": "We couldn't find any items. Try a better-lit photo.",
-    "TOO_MANY_REQUESTS": "Too many requests. Please wait a moment and try again.",
+    "TOO_MANY_REQUESTS": "Rate limit reached. Please wait a moment before scanning again.",
     "RATE_LIMITED": "Please wait a moment before scanning again.",
+    "DAILY_QUOTA_EXCEEDED": "Daily scan limit reached. Please try again tomorrow or add billing to your Gemini API project.",
+    "ANTHROPIC_AUTH_ERROR": "OCR authentication failed. Please check the API key configuration.",
+    "MODEL_ABORTED": "The scan was blocked by a content filter. Try a different photo or retake from a cleaner angle.",
     "GENERIC": "Something went wrong. Please try again."
   },
   "scan": {
@@ -29,17 +62,80 @@
       "readable": "Prices and item names must be readable"
     }
   },
+  "processing": {
+    "phases": {
+      "scanning": "Scanning",
+      "analyzing": "Analyzing"
+    },
+    "scanningMessages": [
+      "Scanning your receipt...",
+      "Reading every character...",
+      "Capturing the text..."
+    ],
+    "analyzingMessages": [
+      "Analyzing items...",
+      "Mapping names to prices...",
+      "Calculating totals...",
+      "Almost there..."
+    ]
+  },
   "review": {
     "title": "Review Items",
+    "merchant": "Merchant",
+    "yourReceipt": "Your Receipt",
+    "grandTotal": "Grand Total",
+    "precisionScan": "Precision Scan Active",
+    "itemsDetected_one": "{{count}} item detected",
+    "itemsDetected_other": "{{count}} items detected",
+    "identifyGratuity": "Identify Gratuity",
+    "serviceChargeDetected": "Service charge of {{amount}} detected",
+    "asTip": "As Tip",
+    "keep": "Keep",
     "lowConfidence": "Some items may need checking — please review carefully",
-    "subtotalMismatch": "Items total doesn't match receipt subtotal"
+    "lowConfidenceDetail": "Low scan confidence — the receipt may be blurry or partially cut off. Please check every item name and price carefully before continuing.",
+    "subtotalMismatch": "Items total doesn't match receipt subtotal",
+    "magicFixFailed": "Gemini couldn't resolve the difference — please check items manually.",
+    "magicFixButton": "✨ Magic Fix",
+    "magicFixLoading": "⏳ Asking Gemini…",
+    "autoFixed": "✅ Auto-fixed — prices reconciled automatically.",
+    "itemizedLedger": "Itemized Ledger",
+    "addItem": "Add Item",
+    "subtotal": "Subtotal",
+    "confirm": "Confirm",
+    "tax": "Tax",
+    "noItems": "No items yet. Tap \"Add Item\" above.",
+    "flaggedItem": "⚠️ Unit price was recalculated from the charged total. Please verify.",
+    "itemNamePlaceholder": "Item name",
+    "done": "Done"
   },
   "people": {
     "title": "Who's splitting?",
+    "whosJoining": "Who's\nJoining?",
+    "chooseHowSettle": "Choose how you want to settle this ledger. Start splitting with people.",
     "addPerson": "Add person",
     "justMe": "Just me",
+    "justMeDesc": "Solo claim of the entire bill",
+    "wholeTable": "Whole Table",
+    "wholeTableDesc": "Everyone splits together",
+    "someOfUs": "Some of us",
+    "someOfUsDesc": "Pick guests to split",
     "allOfUs": "All of us",
-    "someOfUs": "Some of us"
+    "changeMode": "Change mode",
+    "addEveryone": "Add everyone at the table.",
+    "addPeopleWith": "Add the people splitting with you.",
+    "theLedger": "The Ledger",
+    "personAdded_one": "{{count}} person added",
+    "personAdded_other": "{{count}} people added",
+    "primary": "Primary",
+    "yourName": "Your name",
+    "namePlaceholder": "Name",
+    "addGuestByName": "Add guest by name...",
+    "add": "Add",
+    "quickAdd": "Quick add",
+    "addNGuests": "+{{count}} guests",
+    "frequentSplitters": "Frequent Splitters",
+    "startSplitting": "Start Splitting",
+    "splitMyShare": "Split My Share"
   },
   "claim": {
     "title": "Claim your items",
@@ -47,11 +143,38 @@
     "seeTotal": "See My Total",
     "done": "Done →"
   },
+  "tip": {
+    "title": "Tip & Tax",
+    "subtitle": "How much would you like to tip?",
+    "amount": "Tip Amount",
+    "customPct": "Custom %",
+    "splitBy": "Split Tip By",
+    "byOrderSize": "By order size",
+    "splitEqually": "Split equally",
+    "tax": "Tax",
+    "taxIncluded": "✓ Included in prices (Israeli VAT)",
+    "preview": "Preview",
+    "noPeople": "No people added yet",
+    "viewSummary": "View Summary"
+  },
   "summary": {
     "title": "Summary",
     "total": "Total",
     "share": "Share",
     "newSplit": "New Split"
+  },
+  "roundRobin": {
+    "allDone": "All done!",
+    "everyoneSeenTotal": "Everyone's seen their total",
+    "backToSummary": "Back to Summary",
+    "noPeople": "No people to show",
+    "passPhoneTo": "Pass phone to",
+    "ofPeople": "({{current}} of {{total}})",
+    "showTotal": "Show my total →",
+    "youOwe": "{{name}}, you owe",
+    "shared": "(shared)",
+    "donePassTo": "Done — Pass to {{name}} →",
+    "finish": "Finish ✓"
   },
   "auth": {
     "signIn": "Sign in to continue",
@@ -122,5 +245,10 @@
     "next": "Next →",
     "done": "Done ✓",
     "skip": "Skip tour"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "message": "An unexpected error occurred. Your data is safe — please reload the app.",
+    "reload": "Reload App"
   }
 }
