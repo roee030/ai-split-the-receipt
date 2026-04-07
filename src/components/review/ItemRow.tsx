@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Trash2, Edit3 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useDirection } from '../../hooks/useDirection';
 import type { ReceiptItem } from '../../types/receipt.types';
 import { CurrencyDisplay } from '../common/CurrencyDisplay';
 
@@ -54,14 +55,15 @@ export function ItemRow({
   priceInputRef,
 }: Props) {
   const { t } = useTranslation();
+  const { isRTL } = useDirection();
 
   return (
     <motion.div
       key={item.id}
       layout
-      initial={{ opacity: 0, x: 20 }}
+      initial={{ opacity: 0, x: isRTL ? -20 : 20 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -40 }}
+      exit={{ opacity: 0, x: isRTL ? 40 : -40 }}
       className="border-b border-border last:border-b-0"
     >
       {isEditing ? (

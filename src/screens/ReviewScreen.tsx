@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, ChevronRight, CheckCircle2, Sparkles } from 'lucide-react';
+import { Plus, ChevronRight, ChevronLeft, CheckCircle2, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useDirection } from '../hooks/useDirection';
 import { useSession } from '../context/SplitSessionContext';
 import { formatCurrency } from '../utils/currency';
 import { ScreenContainer } from '../components/common/ScreenContainer';
@@ -18,6 +19,7 @@ export function ReviewScreen() {
   const { session, setScreen, updateItem, deleteItem, addItem, setServiceCharge, setReceiptItems } = useSession();
   const { receiptItems, currency, restaurantName, tax, serviceCharge, subtotal, scanConfidence, lastTranscript, debugImageUrl, autoFixed } = session;
   const { t } = useTranslation();
+  const { isRTL } = useDirection();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [serviceAsTip, setServiceAsTip] = useState<boolean | null>(null);
   const [magicFixLoading, setMagicFixLoading] = useState(false);
@@ -258,7 +260,7 @@ export function ReviewScreen() {
             whileTap={{ scale: 0.97 }}
           >
             {t('review.confirm')}
-            <ChevronRight className="w-4 h-4" />
+            {isRTL ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </motion.button>
         </div>
       </div>

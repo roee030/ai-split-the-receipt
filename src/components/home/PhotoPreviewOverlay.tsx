@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, RotateCcw, ChevronRight } from 'lucide-react';
+import { X, RotateCcw, ChevronRight, ChevronLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useDirection } from '../../hooks/useDirection';
 
 interface Props {
   visible: boolean;
@@ -12,6 +13,7 @@ interface Props {
 
 export function PhotoPreviewOverlay({ visible, previewUrl, onRetake, onConfirm, onDismiss }: Props) {
   const { t } = useTranslation();
+  const { isRTL } = useDirection();
 
   const checklist = [
     { icon: '💡', label: t('home.previewChecklist.lit') },
@@ -91,7 +93,7 @@ export function PhotoPreviewOverlay({ visible, previewUrl, onRetake, onConfirm, 
               whileTap={{ scale: 0.97 }}
             >
               {t('home.scanReceipt')}
-              <ChevronRight className="w-5 h-5" />
+              {isRTL ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
             </motion.button>
           </div>
         </motion.div>
