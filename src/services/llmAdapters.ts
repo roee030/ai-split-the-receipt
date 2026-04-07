@@ -38,6 +38,10 @@ export async function transcribeImage(
       return geminiTranscribe(imageBase64, mimeType, geminiModelName(provider));
     case "claude-sonnet-4-5":
       return claudeTranscribe(imageBase64, mimeType);
+    default: {
+      const _: never = provider;
+      throw new Error(`Unknown provider: ${String(_)}`);
+    }
   }
 }
 
@@ -58,6 +62,10 @@ export async function structureTranscript(
       return geminiStructure(prompt, geminiModelName(provider));
     case "claude-sonnet-4-5":
       return claudeStructure(prompt);
+    default: {
+      const _: never = provider;
+      throw new Error(`Unknown provider: ${String(_)}`);
+    }
   }
 }
 
@@ -84,6 +92,10 @@ export async function magicFix(
         return geminiMagicFix(prompt, geminiModelName(provider));
       case "claude-sonnet-4-5":
         return claudeMagicFix(prompt);
+      default: {
+        const _: never = provider;
+        throw new Error(`Unknown provider: ${String(_)}`);
+      }
     }
   } catch {
     return null;
