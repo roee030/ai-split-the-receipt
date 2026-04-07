@@ -197,7 +197,7 @@ export function ClaimScreen() {
             whileTap={{ scale: 0.97 }}
           >
             {session.splitMode === 'whole' && unclaimedCount > 0
-              ? `${unclaimedCount} unclaimed`
+              ? t('claim.unclaimed', { count: unclaimedCount })
               : session.splitMode === 'solo'
                 ? t('claim.seeTotal')
                 : t('claim.done')}
