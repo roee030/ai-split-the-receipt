@@ -141,7 +141,12 @@
     "title": "תבע את הפריטים שלך",
     "unclaimed": "{{count}} לא תבועים",
     "seeTotal": "ראה את הסכום שלי",
-    "done": "סיום ←"
+    "done": "סיום ←",
+    "claimed": "שויך אליי ✓",
+    "tapToClaim": "לחץ לבחירה",
+    "shared": "מחולק",
+    "sharedBy": "מחולק ל-{{count}}",
+    "myQtyOf": "{{my}} מתוך {{total}}"
   },
   "tip": {
     "title": "טיפ ומס",
@@ -161,7 +166,23 @@
     "title": "סיכום",
     "total": "סה\"כ",
     "share": "שתף",
-    "newSplit": "פיצול חדש"
+    "newSplit": "פיצול חדש",
+    "subtotal": "סיכום ביניים",
+    "tip": "תשר",
+    "tax": "מע\"מ",
+    "service": "דמי שירות",
+    "sharedLabel": "(משותף)",
+    "owes": "{{name}} חייב {{amount}}",
+    "copyOwes": "העתק \"{{name}} חייב {{amount}}\""
+  },
+  "nav": {
+    "back": "חזרה",
+    "home": "בית",
+    "reviewItems": "סקור פריטים",
+    "whosJoining": "מי מצטרף",
+    "claimDishes": "תבע מנות",
+    "tipAndTax": "טיפ ומס",
+    "summary": "סיכום"
   },
   "roundRobin": {
     "allDone": "הכל סיים!",

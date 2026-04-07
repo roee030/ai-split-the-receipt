@@ -141,7 +141,12 @@
     "title": "اختر عناصرك",
     "unclaimed": "{{count}} غير محددة",
     "seeTotal": "عرض إجماليّ",
-    "done": "تم →"
+    "done": "تم →",
+    "claimed": "Claimed ✓",
+    "tapToClaim": "Tap to claim",
+    "shared": "Shared",
+    "sharedBy": "Shared ÷ {{count}}",
+    "myQtyOf": "{{my}} of {{total}}"
   },
   "tip": {
     "title": "الإكرامية والضريبة",
@@ -161,7 +166,23 @@
     "title": "الملخص",
     "total": "الإجمالي",
     "share": "مشاركة",
-    "newSplit": "تقسيم جديد"
+    "newSplit": "تقسيم جديد",
+    "subtotal": "Subtotal",
+    "tip": "Tip",
+    "tax": "Tax",
+    "service": "Service",
+    "sharedLabel": "(shared)",
+    "owes": "{{name}} owes {{amount}}",
+    "copyOwes": "Copy \"{{name}} owes {{amount}}\""
+  },
+  "nav": {
+    "back": "Back",
+    "home": "Home",
+    "reviewItems": "Review Items",
+    "whosJoining": "Who's Joining",
+    "claimDishes": "Claim Dishes",
+    "tipAndTax": "Tip & Tax",
+    "summary": "Summary"
   },
   "roundRobin": {
     "allDone": "انتهينا!",

@@ -141,7 +141,12 @@
     "title": "Reivindique seus itens",
     "unclaimed": "{{count}} não reivindicado(s)",
     "seeTotal": "Ver meu total",
-    "done": "Pronto →"
+    "done": "Pronto →",
+    "claimed": "Claimed ✓",
+    "tapToClaim": "Tap to claim",
+    "shared": "Shared",
+    "sharedBy": "Shared ÷ {{count}}",
+    "myQtyOf": "{{my}} of {{total}}"
   },
   "tip": {
     "title": "Gorjeta e imposto",
@@ -161,7 +166,23 @@
     "title": "Resumo",
     "total": "Total",
     "share": "Compartilhar",
-    "newSplit": "Nova divisão"
+    "newSplit": "Nova divisão",
+    "subtotal": "Subtotal",
+    "tip": "Tip",
+    "tax": "Tax",
+    "service": "Service",
+    "sharedLabel": "(shared)",
+    "owes": "{{name}} owes {{amount}}",
+    "copyOwes": "Copy \"{{name}} owes {{amount}}\""
+  },
+  "nav": {
+    "back": "Back",
+    "home": "Home",
+    "reviewItems": "Review Items",
+    "whosJoining": "Who's Joining",
+    "claimDishes": "Claim Dishes",
+    "tipAndTax": "Tip & Tax",
+    "summary": "Summary"
   },
   "roundRobin": {
     "allDone": "Tudo pronto!",

@@ -141,7 +141,12 @@
     "title": "Réclamez vos articles",
     "unclaimed": "{{count}} non réclamé(s)",
     "seeTotal": "Voir mon total",
-    "done": "Terminé →"
+    "done": "Terminé →",
+    "claimed": "Claimed ✓",
+    "tapToClaim": "Tap to claim",
+    "shared": "Shared",
+    "sharedBy": "Shared ÷ {{count}}",
+    "myQtyOf": "{{my}} of {{total}}"
   },
   "tip": {
     "title": "Pourboire et taxe",
@@ -161,7 +166,23 @@
     "title": "Résumé",
     "total": "Total",
     "share": "Partager",
-    "newSplit": "Nouveau partage"
+    "newSplit": "Nouveau partage",
+    "subtotal": "Subtotal",
+    "tip": "Tip",
+    "tax": "Tax",
+    "service": "Service",
+    "sharedLabel": "(shared)",
+    "owes": "{{name}} owes {{amount}}",
+    "copyOwes": "Copy \"{{name}} owes {{amount}}\""
+  },
+  "nav": {
+    "back": "Back",
+    "home": "Home",
+    "reviewItems": "Review Items",
+    "whosJoining": "Who's Joining",
+    "claimDishes": "Claim Dishes",
+    "tipAndTax": "Tip & Tax",
+    "summary": "Summary"
   },
   "roundRobin": {
     "allDone": "Tout est fait !",

@@ -141,7 +141,12 @@
     "title": "Выберите свои позиции",
     "unclaimed": "{{count}} не выбрано",
     "seeTotal": "Посмотреть мой итог",
-    "done": "Готово →"
+    "done": "Готово →",
+    "claimed": "Claimed ✓",
+    "tapToClaim": "Tap to claim",
+    "shared": "Shared",
+    "sharedBy": "Shared ÷ {{count}}",
+    "myQtyOf": "{{my}} of {{total}}"
   },
   "tip": {
     "title": "Чаевые и налог",
@@ -161,7 +166,23 @@
     "title": "Итог",
     "total": "Итого",
     "share": "Поделиться",
-    "newSplit": "Новое разделение"
+    "newSplit": "Новое разделение",
+    "subtotal": "Subtotal",
+    "tip": "Tip",
+    "tax": "Tax",
+    "service": "Service",
+    "sharedLabel": "(shared)",
+    "owes": "{{name}} owes {{amount}}",
+    "copyOwes": "Copy \"{{name}} owes {{amount}}\""
+  },
+  "nav": {
+    "back": "Back",
+    "home": "Home",
+    "reviewItems": "Review Items",
+    "whosJoining": "Who's Joining",
+    "claimDishes": "Claim Dishes",
+    "tipAndTax": "Tip & Tax",
+    "summary": "Summary"
   },
   "roundRobin": {
     "allDone": "Всё готово!",
