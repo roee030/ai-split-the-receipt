@@ -3,24 +3,23 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
+import { cloudflare } from "@cloudflare/vite-plugin";
+
 export default defineConfig({
-  plugins: [
-    react(),
-    VitePWA({
-      registerType: "autoUpdate",
-      manifest: false, // We use our own public/manifest.json
-      workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/firestore\.googleapis\.com/,
-            handler: "NetworkFirst",
-            options: { cacheName: "firestore-cache" },
-          },
-        ],
-      },
-    }),
-  ],
+  plugins: [react(), VitePWA({
+    registerType: "autoUpdate",
+    manifest: false, // We use our own public/manifest.json
+    workbox: {
+      globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+      runtimeCaching: [
+        {
+          urlPattern: /^https:\/\/firestore\.googleapis\.com/,
+          handler: "NetworkFirst",
+          options: { cacheName: "firestore-cache" },
+        },
+      ],
+    },
+  }), cloudflare()],
   base: "/",
   server: {
     proxy: {

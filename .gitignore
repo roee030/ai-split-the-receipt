@@ -11,3 +11,9 @@ skills-lock.json
 firestore.indexes.json
 docs/plans/
 src/recipe test/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
